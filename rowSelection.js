@@ -6,10 +6,22 @@ import {EventManager} from './../../eventManager';
 
 /**
  * @plugin rowSelection
- * Note: keep in mind, that Handsontable instance creates one instance of the plugin class.
  *
  * @description
- * Blank plugin template. It needs to inherit from the BasePlugin class.
+ * This plugin allows injected checkbox in row header
+ *
+ * @example
+ * ```js
+ * ...
+ * // as boolean
+ * rowSelection: true
+ * ...
+ * // as a object with initial checkbox position
+ * rowSelection: {
+ *  inputPosition: 'after',
+ *  multiselect: true // true = all, false = 1, number = number
+ * }
+ *
  */
 class rowSelection extends BasePlugin {
 
@@ -17,24 +29,35 @@ class rowSelection extends BasePlugin {
   constructor(hotInstance) {
     super(hotInstance);
 
+    /**
+     * Instance of {@link EventManager}.
+     *
+     * @private
+     * @type {EventManager}
+     */
     this.eventManager = null;
 
-    // Initialize all your public properties in the class' constructor.
     /**
-     * yourProperty description.
+     * position input, 'after' 'before' or undefined (replace)
      *
      * @type {String}
      */
-    this.inputPosition = null;
-
-    this.multiselect = true ? this.maxRows : 1;
-    this.maxRows = null;
+    this.inputPosition = '';
 
     /**
-     * anotherProperty description.
-     * @type {Array}
+     * multiselect choice, true, false or Number
+     *
+     * @type {Boolean/Number}
      */
-    this.selectedData = new Map(); console.log(this.hot.getSettings());
+    this.multiselect = true;
+
+    /**
+     * selected data
+     *
+     * @private
+     * @type {Object Map}
+     */
+    this.selectedData = new Map();
   }
 
   /**
@@ -57,8 +80,9 @@ class rowSelection extends BasePlugin {
       this.eventManager = new EventManager(this);
     }
 
-    // Add all your plugin hooks here. It's a good idea to make use of the arrow functions to keep the context consistent.
-    this.addHook('afterInit', () => this.insertRowHeaderInput(this.inputPosition));
+    // All plugin hooks.
+    this.addHook('afterInit', () => this.addBySettings());
+    this.addHook('afterUpdateSettings', () => this.onAfterUpdateSettings());
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
@@ -68,6 +92,53 @@ class rowSelection extends BasePlugin {
     super.enablePlugin();
   }
 
+  /**
+   * Register all necessary DOM listeners.
+   *
+   * @private
+   */
+  registerEvents() {
+    this.eventManager.addEventListener(this.hot.rootElement, 'change', (e) => this.clickInput(e));
+    this.eventManager.addEventListener(this.hot.rootElement, 'click', (e) => this.clickButton(e));
+  }
+
+  /**
+   * afterUpdateSettings callback.
+   *
+   * @private
+   */
+  onAfterUpdateSettings() {
+    this.addBySettings();
+  }
+
+  addBySettings() {
+    const selectSettings = this.hot.getSettings().rowSelection;
+    let inputPosition = selectSettings.inputPosition;
+    let multiselect = selectSettings.multiselect;
+    let maxRows; console.log(selectSettings);
+
+    if (typeof inputPosition === 'undefined') {
+      this.insertRowHeaderInput();
+    } else {
+      this.insertRowHeaderInput(inputPosition);
+    }
+
+    if (typeof multiselect === 'number') {
+      maxRows = multiselect;
+    }
+
+    if (multiselect === true) {
+      maxRows = this.hot.countRows(); console.log(maxRows);
+    } else {
+      maxRows = 1;
+    }
+  }
+
+  /**
+   * Insert checkbox in row header
+   *
+   * @param {String} input position, default -> replace row number
+   */
   insertRowHeaderInput(inputPosition) {
     const rowHead = this.hot.rootElement.querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
@@ -88,6 +159,11 @@ class rowSelection extends BasePlugin {
     }
   }
 
+  /**
+   * Create checkbox
+   *
+   * @private
+   */
   createInput() {
     const input = document.createElement('input');
     input.className = 'checker';
@@ -97,6 +173,11 @@ class rowSelection extends BasePlugin {
     return input.cloneNode(false);
   }
 
+  /**
+   * Create button
+   *
+   * @private
+   */
   createButton(value) {
     const button = document.createElement('button');
     const content = document.createTextNode(value);
@@ -105,30 +186,25 @@ class rowSelection extends BasePlugin {
     this.hot.rootElement.appendChild(button);
   }
 
-  registerEvents() {
-    this.eventManager.addEventListener(this.hot.rootElement, 'change', (e) => this.clickInput(e));
-    this.eventManager.addEventListener(this.hot.rootElement, 'click', (e) => this.clickButton(e));
-  }
-
+  /**
+   * change DOM listener.
+   *
+   * @private
+   * @param {Event} event Click event.
+   */
   clickInput(event) {
     const src = event.target;
     const table = this.hot.table;
     let tr = src.parentNode.parentNode.parentNode;
-    let check = 0;
-    const max = this.maxRows ? this.maxRows : this.hot.countRows();
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
-        check += 1; console.log(check);
-        if ((check < max)) {
-          addClass(table.rows[tr.rowIndex], 'checked');
-          table.rows[tr.rowIndex].style.color = 'red';
-          if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
-            this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
-          }
+        addClass(table.rows[tr.rowIndex], 'checked');
+        table.rows[tr.rowIndex].style.color = 'red';
+        if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
+          this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
         }
       }
       if (!src.checked) {
-        check -= 1;
         removeClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'black';
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
@@ -140,6 +216,12 @@ class rowSelection extends BasePlugin {
     }
   }
 
+  /**
+   * click DOM listener.
+   *
+   * @private
+   * @param {Event} event Click event.
+   */
   clickButton(event) {
     if (event.target.nodeName === 'BUTTON' && event.target.className == 'button') {
       let value = event.target.textContent;
@@ -156,12 +238,18 @@ class rowSelection extends BasePlugin {
     }
   }
 
+  /**
+   * click DOM listener.
+   * check all checkbox
+   *
+   * @private
+   * @param {Event} event Click event.
+   */
   checkAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
-    const max = this.maxRows ? this.maxRows : arrayInputs.length;
     const tbody = this.hot.view.TBODY;
-    for (let i = 0; i < max; i += 1) {
+    for (let i = 0; i < arrayInputs.length; i += 1) {
       let input = arrayInputs[i];
       input.checked = true;
       addClass(tbody.rows[i], 'checked');
@@ -174,6 +262,13 @@ class rowSelection extends BasePlugin {
     console.log(vals);
   }
 
+  /**
+   * click DOM listener.
+   * uncheck all checkbox
+   *
+   * @private
+   * @param {Event} event Click event.
+   */
   clearAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
@@ -208,16 +303,6 @@ class rowSelection extends BasePlugin {
     this.enablePlugin();
 
     super.updatePlugin();
-  }
-
-  /**
-   * The afterChange hook callback.
-   *
-   * @param {Array} changes Array of changes.
-   * @param {String} source Describes the source of the change.
-   */
-  onAfterChange(changes, source) {
-    // afterChange callback goes here.
   }
 
   /**
