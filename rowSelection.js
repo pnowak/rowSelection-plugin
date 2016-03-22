@@ -146,6 +146,7 @@ class rowSelection extends BasePlugin {
    * Insert checkbox in row header
    *
    * @param {String} input position, default -> replace row number
+   * @param {Array} rows where input should be
    */
   insertRowHeaderInput(inputPosition, rows) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
@@ -153,8 +154,7 @@ class rowSelection extends BasePlugin {
     const tbody = this.hot.view.TBODY;
     let len = rows === undefined ? arrayRows.length : rows.length;
     for (let i = 0; i < len; i += 1) {
-      let val = rows[rows[i]]; console.log(val);
-      let parent = tbody.rows[val].parentNode || arrayRows[i].parentNode;
+      let parent = rows === undefined ? arrayRows[i].parentNode : tbody.rows[rows[rows[i]]].parentNode;
       switch (inputPosition) {
         case 'before':
           parent.insertAdjacentHTML('afterbegin', '<input class="checker" type="checkbox" autocomplete="off">');
