@@ -45,6 +45,13 @@ class rowSelection extends BasePlugin {
     this.inputPosition = '';
 
     /**
+     * cherry-pick rows
+     *
+     * @type {Array}
+     */
+    this.selectableRows = null;
+
+    /**
      * multiselect choice, true, false or Number
      *
      * @type {Boolean/Number}
@@ -81,7 +88,7 @@ class rowSelection extends BasePlugin {
     }
 
     // All plugin hooks.
-    this.addHook('afterInit', () => this.addBySettings());
+    this.addHook('afterInit', () => this.modifyBySettings());
     this.addHook('afterUpdateSettings', () => this.onAfterUpdateSettings());
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
@@ -108,19 +115,20 @@ class rowSelection extends BasePlugin {
    * @private
    */
   onAfterUpdateSettings() {
-    this.addBySettings();
+    this.modifyBySettings();
   }
 
-  addBySettings() {
+  modifyBySettings() {
     const selectSettings = this.hot.getSettings().rowSelection;
     let inputPosition = selectSettings.inputPosition;
     let multiselect = selectSettings.multiselect;
+    let selectableRows = selectSettings.selectableRows;
     let maxRows; console.log(selectSettings);
 
     if (typeof inputPosition === 'undefined') {
-      this.insertRowHeaderInput();
+      this.insertRowHeaderInput(null, selectableRows);
     } else {
-      this.insertRowHeaderInput(inputPosition);
+      this.insertRowHeaderInput(inputPosition, selectableRows);
     }
 
     if (typeof multiselect === 'number') {
@@ -139,11 +147,14 @@ class rowSelection extends BasePlugin {
    *
    * @param {String} input position, default -> replace row number
    */
-  insertRowHeaderInput(inputPosition) {
-    const rowHead = this.hot.rootElement.querySelectorAll('span.rowHeader');
+  insertRowHeaderInput(inputPosition, rows) {
+    const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
-    for (let i = 0, len = arrayRows.length; i < len; i += 1) {
-      let parent = arrayRows[i].parentNode;
+    const tbody = this.hot.view.TBODY;
+    let len = rows === undefined ? arrayRows.length : rows.length;
+    for (let i = 0; i < len; i += 1) {
+      let val = rows[rows[i]]; console.log(val);
+      let parent = tbody.rows[val].parentNode || arrayRows[i].parentNode;
       switch (inputPosition) {
         case 'before':
           parent.insertAdjacentHTML('afterbegin', '<input class="checker" type="checkbox" autocomplete="off">');
