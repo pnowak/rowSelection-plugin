@@ -49,19 +49,18 @@ class rowSelection extends BasePlugin {
      *
      * @type {Array}
      */
-    this.selectableRows = null;
+    this.selectedRows = null;
 
     /**
-     * multiselect choice, true, false or Number
+     * multiselect choice - true, false or Number
      *
-     * @type {Boolean/Number}
+     * @type {Boolean or Number}
      */
     this.multiselect = true;
 
     /**
      * selected data
      *
-     * @private
      * @type {Object Map}
      */
     this.selectedData = new Map();
@@ -121,14 +120,14 @@ class rowSelection extends BasePlugin {
   modifyBySettings() {
     const selectSettings = this.hot.getSettings().rowSelection;
     let inputPosition = selectSettings.inputPosition;
+    let selectedRows = selectSettings.selectedRows;
     let multiselect = selectSettings.multiselect;
-    let selectableRows = selectSettings.selectableRows;
     let maxRows; console.log(selectSettings);
 
     if (typeof inputPosition === 'undefined') {
-      this.insertRowHeaderInput(null, selectableRows);
+      this.insertRowHeaderInput(null, selectedRows);
     } else {
-      this.insertRowHeaderInput(inputPosition, selectableRows);
+      this.insertRowHeaderInput(inputPosition, selectedRows);
     }
 
     if (typeof multiselect === 'number') {
@@ -136,7 +135,7 @@ class rowSelection extends BasePlugin {
     }
 
     if (multiselect === true) {
-      maxRows = this.hot.countRows(); console.log(maxRows);
+      maxRows = this.hot.countRows();
     } else {
       maxRows = 1;
     }
@@ -148,13 +147,12 @@ class rowSelection extends BasePlugin {
    * @param {String} input position, default -> replace row number
    * @param {Array} rows where input should be
    */
-  insertRowHeaderInput(inputPosition, rows) {
+  insertRowHeaderInput(inputPosition, selectedRows) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
-    const tbody = this.hot.view.TBODY;
-    let len = rows === undefined ? arrayRows.length : rows.length;
+    let len = selectedRows === undefined ? arrayRows.length : selectedRows.length;
     for (let i = 0; i < len; i += 1) {
-      let parent = rows === undefined ? arrayRows[i].parentNode : tbody.rows[rows[rows[i]]].parentNode;
+      let parent = selectedRows === undefined ? arrayRows[i].parentNode : arrayRows[selectedRows[i] - 1].parentNode;
       switch (inputPosition) {
         case 'before':
           parent.insertAdjacentHTML('afterbegin', '<input class="checker" type="checkbox" autocomplete="off">');
@@ -164,7 +162,7 @@ class rowSelection extends BasePlugin {
           break;
         default:
           let input = this.createInput();
-          parent.replaceChild(input, arrayRows[i]);
+          parent.replaceChild(input, arrayRows[selectedRows[i] - 1] || arrayRows[i]);
           break;
       }
     }
