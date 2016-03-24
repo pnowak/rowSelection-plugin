@@ -19,6 +19,7 @@ import {EventManager} from './../../eventManager';
  * // as a object with initial checkbox position
  * rowSelection: {
  *  inputPosition: 'after',
+ *  selectedRows: [2, 4, 6, 8, 10],
  *  multiselect: true // true = all, false = 1, number = number
  * }
  *
@@ -119,10 +120,10 @@ class rowSelection extends BasePlugin {
 
   modifyBySettings() {
     const selectSettings = this.hot.getSettings().rowSelection;
-    let inputPosition = selectSettings.inputPosition;
-    let selectedRows = selectSettings.selectedRows;
-    let multiselect = selectSettings.multiselect;
-    let maxRows; console.log(selectSettings);
+    const inputPosition = selectSettings.inputPosition;
+    const selectedRows = selectSettings.selectedRows;
+    const multiselect = selectSettings.multiselect;
+    this.selectedRows = selectedRows;
 
     if (typeof inputPosition === 'undefined') {
       this.insertRowHeaderInput(null, selectedRows);
@@ -131,13 +132,13 @@ class rowSelection extends BasePlugin {
     }
 
     if (typeof multiselect === 'number') {
-      maxRows = multiselect;
+      this.multiselect = multiselect;
     }
 
     if (multiselect === true) {
-      maxRows = this.hot.countRows();
+      this.multiselect = this.hot.countRows();
     } else {
-      maxRows = 1;
+      this.multiselect = 1;
     }
   }
 
@@ -257,14 +258,17 @@ class rowSelection extends BasePlugin {
   checkAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
+    const selected = this.selectedRows;
+    const multiselect = this.multiselect;
     const tbody = this.hot.view.TBODY;
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let input = arrayInputs[i];
+      let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       input.checked = true;
-      addClass(tbody.rows[i], 'checked');
-      tbody.rows[i].style.color = 'red';
-      if (!(this.selectedData.has(tbody.rows[i]))) {
-        this.selectedData.set(tbody.rows[i], this.hot.getDataAtRow(tbody.rows[i].rowIndex - 1));
+      addClass(tbody.rows[index], 'checked');
+      tbody.rows[index].style.color = 'red';
+      if (!(this.selectedData.has(tbody.rows[index]))) {
+        this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
     }
     let vals = [...this.selectedData.entries()];
@@ -281,12 +285,14 @@ class rowSelection extends BasePlugin {
   clearAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
+    const selected = this.selectedRows;
     const tbody = this.hot.view.TBODY;
     for (let i = 0, len = arrayInputs.length; i < len; i += 1) {
       let input = arrayInputs[i];
+      let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       input.checked = false;
-      removeClass(tbody.rows[i], 'checked');
-      tbody.rows[i].style.color = 'black';
+      removeClass(tbody.rows[index], 'checked');
+      tbody.rows[index].style.color = 'black';
     }
     this.selectedData.clear();
     console.log(this.selectedData);
