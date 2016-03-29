@@ -1,4 +1,3 @@
-// You need to import the BasePlugin class in order to inherit from it.
 import BasePlugin from './../_base';
 import {registerPlugin, getPlugin} from './../../plugins';
 import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
@@ -120,15 +119,32 @@ class rowSelection extends BasePlugin {
 
   modifyBySettings() {
     const selectSettings = this.hot.getSettings().rowSelection;
-    const inputPosition = selectSettings.inputPosition;
-    const selectedRows = selectSettings.selectedRows;
-    const multiselect = selectSettings.multiselect;
-    this.selectedRows = selectedRows;
+    let inputPosition = selectSettings.inputPosition;
+    let selectedRows = selectSettings.selectedRows;
+    let multiselect = selectSettings.multiselect;
+
+    if (selectedRows === undefined) {
+      this.selectedRows = selectedRows; console.log(this.selectedRows);
+    } else {
+      let rows = [];
+      for (let i = 0, len = selectedRows.length; i < len; i += 1) {
+        if (Array.isArray(selectedRows[i])) {
+          let start = selectedRows[i][0];
+          let stop = selectedRows[i][1];
+          for (let j = start; j <= stop; j += 1) {
+            rows.push(j);
+          }
+        } else {
+          rows.push(selectedRows[i]);
+        }
+      }
+      this.selectedRows = rows;
+    }
 
     if (typeof inputPosition === 'undefined') {
-      this.insertRowHeaderInput(null, selectedRows);
+      this.insertRowHeaderInput(null, selectedRows = this.selectedRows);
     } else {
-      this.insertRowHeaderInput(inputPosition, selectedRows);
+      this.insertRowHeaderInput(inputPosition, selectedRows = this.selectedRows);
     }
 
     if (typeof multiselect === 'number') {
@@ -163,7 +179,8 @@ class rowSelection extends BasePlugin {
           break;
         default:
           let input = this.createInput();
-          parent.replaceChild(input, arrayRows[selectedRows[i] - 1] || arrayRows[i]);
+          let child = (arrayRows[selectedRows[i] - 1] || arrayRows[i]);
+          parent.replaceChild(input, child);
           break;
       }
     }
@@ -271,8 +288,7 @@ class rowSelection extends BasePlugin {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
     }
-    let vals = [...this.selectedData.entries()];
-    console.log(vals);
+    console.log([...this.selectedData.entries()]);
   }
 
   /**
@@ -295,7 +311,6 @@ class rowSelection extends BasePlugin {
       tbody.rows[index].style.color = 'black';
     }
     this.selectedData.clear();
-    console.log(this.selectedData);
   }
 
   /**
