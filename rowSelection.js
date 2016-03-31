@@ -18,7 +18,7 @@ import {EventManager} from './../../eventManager';
  * // as a object with initial checkbox position
  * rowSelection: {
  *  inputPosition: 'after',
- *  selectedRows: [2, 4, 6, 8, 10],
+ *  selectedRows: [2, 4, 6, 8, 10] or [[1, 5], 10]
  *  multiselect: true // true = all, false = 1, number = number
  * }
  *
@@ -42,21 +42,35 @@ class rowSelection extends BasePlugin {
      *
      * @type {String}
      */
-    this.inputPosition = '';
+    this.inputPosition = void 0;
 
     /**
      * cherry-pick rows
      *
      * @type {Array}
      */
-    this.selectedRows = null;
+    this.selectedRows = void 0;
 
     /**
      * multiselect choice - true, false or Number
      *
      * @type {Boolean or Number}
      */
-    this.multiselect = true;
+    this.multiselect = void 0;
+
+    /**
+     * helper count
+     *
+     * @type {Number}
+     */
+    this.completed = 0;
+
+    /**
+     *
+     *
+     * @type {Fuction}
+     */
+    this.isRowSelectable = void 0;
 
     /**
      * selected data
@@ -87,11 +101,11 @@ class rowSelection extends BasePlugin {
     }
 
     // All plugin hooks.
-    this.addHook('afterInit', () => this.modifyBySettings());
-    this.addHook('afterUpdateSettings', () => this.onAfterUpdateSettings());
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
+    this.addHook('afterInit', () => this.modifyBySettings());
+    this.addHook('afterUpdateSettings', () => this.onAfterUpdateSettings());
     this.registerEvents();
 
     // The super method assigns the this.enabled property to true, which can be later used to check if plugin is already enabled.
@@ -122,9 +136,17 @@ class rowSelection extends BasePlugin {
     let inputPosition = selectSettings.inputPosition;
     let selectedRows = selectSettings.selectedRows;
     let multiselect = selectSettings.multiselect;
+    let isRowSelectable = selectSettings.isRowSelectable;
+
+    if (isRowSelectable === undefined) {
+      const only = document.getElementById('Only selectable');
+      only.setAttribute('disabled', true);
+    } else if (typeof isRowSelectable === 'function') {
+      this.isRowSelectable = isRowSelectable;
+    }
 
     if (selectedRows === undefined) {
-      this.selectedRows = selectedRows; console.log(this.selectedRows);
+      this.selectedRows = selectedRows;
     } else {
       let rows = [];
       for (let i = 0, len = selectedRows.length; i < len; i += 1) {
@@ -149,9 +171,7 @@ class rowSelection extends BasePlugin {
 
     if (typeof multiselect === 'number') {
       this.multiselect = multiselect;
-    }
-
-    if (multiselect === true) {
+    } else if (multiselect === true) {
       this.multiselect = this.hot.countRows();
     } else {
       this.multiselect = 1;
@@ -209,6 +229,7 @@ class rowSelection extends BasePlugin {
     const button = document.createElement('button');
     const content = document.createTextNode(value);
     button.className = 'button';
+    button.setAttribute('id', value);
     button.appendChild(content);
     this.hot.rootElement.appendChild(button);
   }
@@ -225,21 +246,26 @@ class rowSelection extends BasePlugin {
     let tr = src.parentNode.parentNode.parentNode;
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
-        addClass(table.rows[tr.rowIndex], 'checked');
-        table.rows[tr.rowIndex].style.color = 'red';
-        if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
-          this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
+        this.completed += 1;
+        if (this.completed <= this.multiselect) {
+          addClass(table.rows[tr.rowIndex], 'checked');
+          table.rows[tr.rowIndex].style.color = 'red';
+          if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
+            this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
+          }
+        } else {
+          console.log('done!');
         }
       }
       if (!src.checked) {
+        this.completed -= 1;
         removeClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'black';
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
           this.selectedData.delete(table.rows[tr.rowIndex]);
         }
       }
-      let vals = [...this.selectedData.entries()];
-      console.log(vals);
+      console.log([...this.selectedData.entries()]);
     }
   }
 
@@ -250,8 +276,9 @@ class rowSelection extends BasePlugin {
    * @param {Event} event Click event.
    */
   clickButton(event) {
-    if (event.target.nodeName === 'BUTTON' && event.target.className == 'button') {
-      let value = event.target.textContent;
+    let src = event.target;
+    if (src.nodeName === 'BUTTON' && src.className == 'button') {
+      let value = src.textContent;
       switch (value) {
         case 'Select all':
           this.checkAll();
@@ -260,7 +287,7 @@ class rowSelection extends BasePlugin {
           this.clearAll();
           break;
         default:
-          console.log('Only selectable');
+          this.onlySelectable();
       }
     }
   }
@@ -274,13 +301,18 @@ class rowSelection extends BasePlugin {
    */
   checkAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    const arrayInputs = Array.from(inputs);
+    const arrayInputs = Array.from(inputs); console.log(arrayInputs);
     const selected = this.selectedRows;
-    const multiselect = this.multiselect;
     const tbody = this.hot.view.TBODY;
-    for (let i = 0; i < arrayInputs.length; i += 1) {
-      let input = arrayInputs[i];
+    let max = typeof this.multiselect === 'number' ? (this.multiselect - this.completed) : arrayInputs.length;
+    for (let i = 0; i < max; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
+      let input = arrayInputs[index];
+      if (input.checked === true) {
+        console.log(input + index + ' ma klase checked');
+        continue;
+      }
+      this.completed += (this.multiselect - this.completed);
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'red';
@@ -311,6 +343,18 @@ class rowSelection extends BasePlugin {
       tbody.rows[index].style.color = 'black';
     }
     this.selectedData.clear();
+    this.completed = 0;
+  }
+
+  /**
+   * click DOM listener.
+   * check all selectable checkbox
+   *
+   * @private
+   * @param {Event} event Click event.
+   */
+  onlySelectable() {
+    return this.isRowSelectable('one one');
   }
 
   /**
