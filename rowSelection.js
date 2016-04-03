@@ -28,7 +28,6 @@ class rowSelection extends BasePlugin {
   // The argument passed to the constructor is the currently processed Handsontable instance object.
   constructor(hotInstance) {
     super(hotInstance);
-
     /**
      * Instance of {@link EventManager}.
      *
@@ -36,42 +35,42 @@ class rowSelection extends BasePlugin {
      * @type {EventManager}
      */
     this.eventManager = null;
-
+    /**
+     * Cached settings from Handsontable settings.
+     *
+     * @type {Object}
+     */
+    this.settings = {};
     /**
      * position input, 'after' 'before' or undefined (replace)
      *
      * @type {String}
      */
     this.inputPosition = void 0;
-
     /**
      * cherry-pick rows
      *
      * @type {Array}
      */
     this.selectedRows = void 0;
-
     /**
      * multiselect choice - true, false or Number
      *
      * @type {Boolean or Number}
      */
     this.multiselect = void 0;
-
     /**
      * helper count
      *
      * @type {Number}
      */
     this.completed = 0;
-
     /**
      *
      *
      * @type {Fuction}
      */
     this.isRowSelectable = void 0;
-
     /**
      * selected data
      *
@@ -88,24 +87,57 @@ class rowSelection extends BasePlugin {
   }
 
   /**
-   * The enablePlugin method is triggered on the beforeInit hook. It should contain your initial plugin setup, along with
-   * the hook connections.
-   * Note, that this method is run only if the statement in the isEnabled method is true.
+   * Enable the plugin.
    */
   enablePlugin() {
     if (this.enabled) {
       return;
     }
+
     if (!this.eventManager) {
       this.eventManager = new EventManager(this);
     }
 
-    // All plugin hooks.
+    let settings = this.hot.getSettings().rowSelection; console.log(settings);
+
+    if (typeof settings === 'object') {
+      this.settings = settings;
+
+      if (settings.selectedRows === undefined) {
+        settings.selectedRows = this.settings.selectedRows;
+      } else if (Array.isArray([...settings.selectedRows])) {
+        let rows = [];
+        for (let i = 0, len = settings.selectedRows.length; i < len; i += 1) {
+          if (Array.isArray(settings.selectedRows[i])) {
+            const [start, stop] = settings.selectedRows[i];
+            for (let j = start; j <= stop; j += 1) {
+              rows.push(j);
+            }
+          } else {
+            rows.push(settings.selectedRows[i]);
+          }
+        }
+        settings.selectedRows = rows;
+      }
+
+      if (typeof settings.inputPosition === 'undefined') {
+        this.addHook('afterInit', () => this.insertRowHeaderInput());
+      } else {
+        this.addHook('afterInit', () => this.insertRowHeaderInput(settings.inputPosition));
+      }
+
+      if (settings.multiselect === true) {
+        let rowsCount = this.addHook('afterInit', () => this.hot.countRows());
+        settings.multiselect = rowsCount;
+      } else if (settings.multiselect === false) {
+        settings.multiselect = 1;
+      }
+    } else {
+      this.addHook('afterInit', () => this.insertRowHeaderInput());
+    }
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
-    this.addHook('afterInit', () => this.modifyBySettings());
-    this.addHook('afterUpdateSettings', () => this.onAfterUpdateSettings());
     this.registerEvents();
 
     // The super method assigns the this.enabled property to true, which can be later used to check if plugin is already enabled.
@@ -123,73 +155,40 @@ class rowSelection extends BasePlugin {
   }
 
   /**
-   * afterUpdateSettings callback.
-   *
-   * @private
+   * The disablePlugin method is used to disable the plugin. Reset all of your classes properties to their default values here.
    */
-  onAfterUpdateSettings() {
-    this.modifyBySettings();
+  disablePlugin() {
+    this.settings = void 0;
+    this.selectedData.clear();
+    // The super method takes care of clearing the hook connections and assigning the 'false' value to the 'this.enabled' property.
+    super.disablePlugin();
   }
 
-  modifyBySettings() {
-    const selectSettings = this.hot.getSettings().rowSelection;
-    let inputPosition = selectSettings.inputPosition;
-    let selectedRows = selectSettings.selectedRows;
-    let multiselect = selectSettings.multiselect;
-    let isRowSelectable = selectSettings.isRowSelectable;
+  /**
+   * The updatePlugin method is called on the afterUpdateSettings hook (unless the updateSettings method turned the plugin off).
+   * It should contain all the stuff your plugin needs to do to work properly after the Handsontable instance settings were modified.
+   */
+  updatePlugin() {
 
-    if (isRowSelectable === undefined) {
-      const only = document.getElementById('Only selectable');
-      only.setAttribute('disabled', true);
-    } else if (typeof isRowSelectable === 'function') {
-      this.isRowSelectable = isRowSelectable;
-    }
+    // The updatePlugin method needs to contain all the code needed to properly re-enable the plugin. In most cases simply disabling and enabling the plugin should do the trick.
+    this.disablePlugin();
+    this.enablePlugin();
 
-    if (selectedRows === undefined) {
-      this.selectedRows = selectedRows;
-    } else {
-      let rows = [];
-      for (let i = 0, len = selectedRows.length; i < len; i += 1) {
-        if (Array.isArray(selectedRows[i])) {
-          let start = selectedRows[i][0];
-          let stop = selectedRows[i][1];
-          for (let j = start; j <= stop; j += 1) {
-            rows.push(j);
-          }
-        } else {
-          rows.push(selectedRows[i]);
-        }
-      }
-      this.selectedRows = rows;
-    }
-
-    if (typeof inputPosition === 'undefined') {
-      this.insertRowHeaderInput(null, selectedRows = this.selectedRows);
-    } else {
-      this.insertRowHeaderInput(inputPosition, selectedRows = this.selectedRows);
-    }
-
-    if (typeof multiselect === 'number') {
-      this.multiselect = multiselect;
-    } else if (multiselect === true) {
-      this.multiselect = this.hot.countRows();
-    } else {
-      this.multiselect = 1;
-    }
+    super.updatePlugin();
   }
 
   /**
    * Insert checkbox in row header
    *
    * @param {String} input position, default -> replace row number
-   * @param {Array} rows where input should be
    */
-  insertRowHeaderInput(inputPosition, selectedRows) {
+  insertRowHeaderInput(inputPosition) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
-    let len = selectedRows === undefined ? arrayRows.length : selectedRows.length;
-    for (let i = 0; i < len; i += 1) {
-      let parent = selectedRows === undefined ? arrayRows[i].parentNode : arrayRows[selectedRows[i] - 1].parentNode;
+    let selected = this.settings.selectedRows;
+    let max = selected === undefined ? arrayRows.length : selected.length;
+    for (let i = 0; i < max; i += 1) {
+      let parent = selected === undefined ? arrayRows[i].parentNode : arrayRows[selected[i] - 1].parentNode;
       switch (inputPosition) {
         case 'before':
           parent.insertAdjacentHTML('afterbegin', '<input class="checker" type="checkbox" autocomplete="off">');
@@ -199,7 +198,7 @@ class rowSelection extends BasePlugin {
           break;
         default:
           let input = this.createInput();
-          let child = (arrayRows[selectedRows[i] - 1] || arrayRows[i]);
+          let child = selected === undefined ? arrayRows[i] : arrayRows[selected[i] - 1];
           parent.replaceChild(input, child);
           break;
       }
@@ -246,19 +245,13 @@ class rowSelection extends BasePlugin {
     let tr = src.parentNode.parentNode.parentNode;
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
-        this.completed += 1;
-        if (this.completed <= this.multiselect) {
-          addClass(table.rows[tr.rowIndex], 'checked');
-          table.rows[tr.rowIndex].style.color = 'red';
-          if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
-            this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
-          }
-        } else {
-          console.log('done!');
+        addClass(table.rows[tr.rowIndex], 'checked');
+        table.rows[tr.rowIndex].style.color = 'red';
+        if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
+          this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
         }
       }
       if (!src.checked) {
-        this.completed -= 1;
         removeClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'black';
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
@@ -301,18 +294,12 @@ class rowSelection extends BasePlugin {
    */
   checkAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    const arrayInputs = Array.from(inputs); console.log(arrayInputs);
-    const selected = this.selectedRows;
+    const arrayInputs = Array.from(inputs);
     const tbody = this.hot.view.TBODY;
-    let max = typeof this.multiselect === 'number' ? (this.multiselect - this.completed) : arrayInputs.length;
-    for (let i = 0; i < max; i += 1) {
+    let selected = this.settings.selectedRows;
+    for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
-      let input = arrayInputs[index];
-      if (input.checked === true) {
-        console.log(input + index + ' ma klase checked');
-        continue;
-      }
-      this.completed += (this.multiselect - this.completed);
+      let input = arrayInputs[i];
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'red';
@@ -333,11 +320,11 @@ class rowSelection extends BasePlugin {
   clearAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
-    const selected = this.selectedRows;
     const tbody = this.hot.view.TBODY;
-    for (let i = 0, len = arrayInputs.length; i < len; i += 1) {
-      let input = arrayInputs[i];
+    let selected = this.settings.selectedRows;
+    for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
+      let input = arrayInputs[i];
       input.checked = false;
       removeClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'black';
@@ -355,28 +342,6 @@ class rowSelection extends BasePlugin {
    */
   onlySelectable() {
     return this.isRowSelectable('one one');
-  }
-
-  /**
-   * The disablePlugin method is used to disable the plugin. Reset all of your classes properties to their default values here.
-   */
-  disablePlugin() {
-    this.selectedData.clear();
-    // The super method takes care of clearing the hook connections and assigning the 'false' value to the 'this.enabled' property.
-    super.disablePlugin();
-  }
-
-  /**
-   * The updatePlugin method is called on the afterUpdateSettings hook (unless the updateSettings method turned the plugin off).
-   * It should contain all the stuff your plugin needs to do to work properly after the Handsontable instance settings were modified.
-   */
-  updatePlugin() {
-
-    // The updatePlugin method needs to contain all the code needed to properly re-enable the plugin. In most cases simply disabling and enabling the plugin should do the trick.
-    this.disablePlugin();
-    this.enablePlugin();
-
-    super.updatePlugin();
   }
 
   /**
