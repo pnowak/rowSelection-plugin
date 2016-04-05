@@ -1,6 +1,7 @@
 import BasePlugin from './../_base';
 import {registerPlugin, getPlugin} from './../../plugins';
 import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
+import {arrayEach, arrayFilter} from './../../helpers/array';
 import {EventManager} from './../../eventManager';
 
 /**
@@ -35,6 +36,14 @@ class rowSelection extends BasePlugin {
      * @type {EventManager}
      */
     this.eventManager = null;
+    /**
+     * Cached reference to the HiddenRows plugin.
+     *
+     * @type {Object}
+     */
+    this.hiddenRowsPlugin = null;
+
+    this.selectHiddenRows = null;
     /**
      * Cached settings from Handsontable settings.
      *
@@ -98,10 +107,16 @@ class rowSelection extends BasePlugin {
       this.eventManager = new EventManager(this);
     }
 
-    let settings = this.hot.getSettings().rowSelection; console.log(settings);
+    this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
+
+    let settings = this.hot.getSettings().rowSelection;
 
     if (typeof settings === 'object') {
-      this.settings = settings;
+      this.settings = settings; console.log(settings);
+
+      if (settings.selectHiddenRows === undefined) {
+        this.settings.selectHiddenRows = settings.selectHiddenRows;
+      }
 
       if (settings.selectedRows === undefined) {
         settings.selectedRows = this.settings.selectedRows;
@@ -132,12 +147,15 @@ class rowSelection extends BasePlugin {
       } else if (settings.multiselect === false) {
         settings.multiselect = 1;
       }
-    } else {
+    }
+    if (settings === true) {
       this.addHook('afterInit', () => this.insertRowHeaderInput());
     }
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
+    this.addHook('afterRender', (row) => this.afterHiddenRow(row));
+    this.addHook('afterOnCellMouseDown', (event, coords, TD) => this.onAfterOnCellMouseDown(event, coords, TD));
     this.registerEvents();
 
     // The super method assigns the this.enabled property to true, which can be later used to check if plugin is already enabled.
@@ -155,26 +173,48 @@ class rowSelection extends BasePlugin {
   }
 
   /**
-   * The disablePlugin method is used to disable the plugin. Reset all of your classes properties to their default values here.
+   * Disable the plugin
    */
   disablePlugin() {
-    this.settings = void 0;
+    this.settings = {};
+    this.hiddenColumnsPlugin = null;
     this.selectedData.clear();
-    // The super method takes care of clearing the hook connections and assigning the 'false' value to the 'this.enabled' property.
     super.disablePlugin();
   }
 
   /**
-   * The updatePlugin method is called on the afterUpdateSettings hook (unless the updateSettings method turned the plugin off).
-   * It should contain all the stuff your plugin needs to do to work properly after the Handsontable instance settings were modified.
+   * Update plugin
    */
   updatePlugin() {
-
-    // The updatePlugin method needs to contain all the code needed to properly re-enable the plugin. In most cases simply disabling and enabling the plugin should do the trick.
     this.disablePlugin();
     this.enablePlugin();
 
     super.updatePlugin();
+  }
+
+  onAfterOnCellMouseDown(event, coords, TD) {
+    console.log(coords);
+  }
+
+  afterHiddenRow(row) {
+    const table = this.hot.table; console.log(table);
+    let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
+
+    if (this.settings.selectHiddenRows === true) {
+      if ((!this.hiddenRowsPlugin.isHidden(row)) && (typeof row === 'number')) {
+        hiddenRows.push(row);
+      }
+
+      if (hiddenRows.length > 0) {
+        arrayEach(hiddenRows, (row) => {
+          row = parseInt(row, 10);
+
+          if (hasClass(table.rows[row + 1], 'checked')) {
+            console.log('checked');
+          }
+        });
+      }
+    }
   }
 
   /**
@@ -245,6 +285,7 @@ class rowSelection extends BasePlugin {
     let tr = src.parentNode.parentNode.parentNode;
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
+        this.completed += 1;
         addClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'red';
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
@@ -252,6 +293,7 @@ class rowSelection extends BasePlugin {
         }
       }
       if (!src.checked) {
+        this.completed -= 1;
         removeClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'black';
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
@@ -290,14 +332,14 @@ class rowSelection extends BasePlugin {
    * check all checkbox
    *
    * @private
-   * @param {Event} event Click event.
    */
   checkAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
     const tbody = this.hot.view.TBODY;
     let selected = this.settings.selectedRows;
-    for (let i = 0; i < arrayInputs.length; i += 1) {
+    let max = typeof this.settings.multiselect === 'number' ? (this.settings.multiselect - this.completed) : arrayInputs.length;
+    for (let i = 0; i < max; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
       input.checked = true;
@@ -315,7 +357,6 @@ class rowSelection extends BasePlugin {
    * uncheck all checkbox
    *
    * @private
-   * @param {Event} event Click event.
    */
   clearAll() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
@@ -338,17 +379,19 @@ class rowSelection extends BasePlugin {
    * check all selectable checkbox
    *
    * @private
-   * @param {Event} event Click event.
    */
   onlySelectable() {
-    return this.isRowSelectable('one one');
+    console.warn('only');
+    if (typeof this.isRowSelectable === 'function') {
+      return this.isRowSelectable();
+    }
   }
 
   /**
    * The destroy method should de-assign all of your properties.
    */
   destroy() {
-    // The super method takes care of de-assigning the event callbacks, plugin hooks and clearing all the plugin properties.
+    this.hiddenColumnsPlugin = null;
     super.destroy();
   }
 }
