@@ -395,12 +395,12 @@ class rowSelection extends BasePlugin {
    * @private
    */
   onlySelectable() {
+    this.clearAll();
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     const arrayInputs = Array.from(inputs);
     const tbody = this.hot.view.TBODY;
     let selected = this.settings.selectedRows;
     let rows = this.isRowSelectable();
-    this.selectedData.clear();
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
