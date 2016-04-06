@@ -42,8 +42,15 @@ class rowSelection extends BasePlugin {
      * @type {Object}
      */
     this.hiddenRowsPlugin = null;
+    /**
+     * Cached reference to the HiddenColumns plugin.
+     *
+     * @type {Object}
+     */
+    this.hiddenColumnsPlugin = null;
 
     this.selectHiddenRows = null;
+    this.selectHiddenColumns = null;
     /**
      * Cached settings from Handsontable settings.
      *
@@ -75,7 +82,7 @@ class rowSelection extends BasePlugin {
      */
     this.completed = 0;
     /**
-     *
+     * configuration function to determine which rows are selectable
      *
      * @type {Fuction}
      */
@@ -108,15 +115,12 @@ class rowSelection extends BasePlugin {
     }
 
     this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
+    this.hiddencolumnsPlugin = this.hot.getPlugin('hiddenColumns');
 
     let settings = this.hot.getSettings().rowSelection;
 
     if (typeof settings === 'object') {
       this.settings = settings; console.log(settings);
-
-      if (settings.selectHiddenRows === undefined) {
-        this.settings.selectHiddenRows = settings.selectHiddenRows;
-      }
 
       if (settings.selectedRows === undefined) {
         settings.selectedRows = this.settings.selectedRows;
@@ -147,6 +151,10 @@ class rowSelection extends BasePlugin {
       } else if (settings.multiselect === false) {
         settings.multiselect = 1;
       }
+
+      if (typeof settings.isRowSelectable === 'function') {
+        this.isRowSelectable = settings.isRowSelectable;
+      }
     }
     if (settings === true) {
       this.addHook('afterInit', () => this.insertRowHeaderInput());
@@ -154,7 +162,9 @@ class rowSelection extends BasePlugin {
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
-    this.addHook('afterRender', (row) => this.afterHiddenRow(row));
+    this.addHook('afterSelection', () => console.log('after selection'));
+    this.addHook('hiddenRow', (row) => this.hiddenRow(row));
+    this.addHook('hiddenRow', (row) => this.afterHiddenRow());
     this.addHook('afterOnCellMouseDown', (event, coords, TD) => this.onAfterOnCellMouseDown(event, coords, TD));
     this.registerEvents();
 
@@ -196,15 +206,19 @@ class rowSelection extends BasePlugin {
     console.log(coords);
   }
 
-  afterHiddenRow(row) {
+  hiddenRow(row) {
+    let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
+
+    if (!this.hiddenRowsPlugin.isHidden(row)) {
+      hiddenRows.push(row);
+    }
+  }
+
+  afterHiddenRow() {
     const table = this.hot.table; console.log(table);
     let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
 
     if (this.settings.selectHiddenRows === true) {
-      if ((!this.hiddenRowsPlugin.isHidden(row)) && (typeof row === 'number')) {
-        hiddenRows.push(row);
-      }
-
       if (hiddenRows.length > 0) {
         arrayEach(hiddenRows, (row) => {
           row = parseInt(row, 10);
@@ -381,16 +395,34 @@ class rowSelection extends BasePlugin {
    * @private
    */
   onlySelectable() {
-    console.warn('only');
-    if (typeof this.isRowSelectable === 'function') {
-      return this.isRowSelectable();
+    const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
+    const arrayInputs = Array.from(inputs);
+    const tbody = this.hot.view.TBODY;
+    let selected = this.settings.selectedRows;
+    let rows = this.isRowSelectable();
+    this.selectedData.clear();
+    for (let i = 0; i < arrayInputs.length; i += 1) {
+      let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
+      let input = arrayInputs[i];
+      for (let j = 0; j < rows.length; j += 1) {
+        if (index === rows[j]) {
+          input.checked = true;
+          addClass(tbody.rows[index], 'checked');
+          tbody.rows[index].style.color = 'red';
+          if (!(this.selectedData.has(tbody.rows[index]))) {
+            this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
+          }
+        }
+      }
     }
+    console.log([...this.selectedData.entries()]);
   }
 
   /**
    * The destroy method should de-assign all of your properties.
    */
   destroy() {
+    this.hiddenRowsPlugin = null;
     this.hiddenColumnsPlugin = null;
     super.destroy();
   }
