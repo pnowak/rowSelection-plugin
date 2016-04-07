@@ -25,8 +25,6 @@ import {EventManager} from './../../eventManager';
  *
  */
 class rowSelection extends BasePlugin {
-
-  // The argument passed to the constructor is the currently processed Handsontable instance object.
   constructor(hotInstance) {
     super(hotInstance);
     /**
@@ -159,13 +157,26 @@ class rowSelection extends BasePlugin {
     if (settings === true) {
       this.addHook('afterInit', () => this.insertRowHeaderInput());
     }
+    if (this.hiddenRowsPlugin.settings.hasOwnProperty('rows')) {
+      let hiddenRowsSettings = this.hiddenRowsPlugin.settings.rows;
+      if (!this.hiddenRowsPlugin.isHidden(hiddenRowsSettings)) {
+        let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
+        hiddenRows.push(hiddenRowsSettings); console.log(hiddenRows);
+        if (settings.selectHiddenRows === true) {
+          const table = this.hot.table; console.log(table);
+          arrayEach(hiddenRows, (row) => {
+            row = parseInt(row, 10);
+
+            if (hasClass(table.rows[row + 1], 'checked')) {
+              console.log('checked');
+            }
+          });
+        }
+      }
+    }
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
-    this.addHook('afterSelection', () => console.log('after selection'));
-    this.addHook('hiddenRow', (row) => this.hiddenRow(row));
-    this.addHook('hiddenRow', (row) => this.afterHiddenRow());
-    this.addHook('afterOnCellMouseDown', (event, coords, TD) => this.onAfterOnCellMouseDown(event, coords, TD));
     this.registerEvents();
 
     // The super method assigns the this.enabled property to true, which can be later used to check if plugin is already enabled.
@@ -200,35 +211,6 @@ class rowSelection extends BasePlugin {
     this.enablePlugin();
 
     super.updatePlugin();
-  }
-
-  onAfterOnCellMouseDown(event, coords, TD) {
-    console.log(coords);
-  }
-
-  hiddenRow(row) {
-    let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
-
-    if (!this.hiddenRowsPlugin.isHidden(row)) {
-      hiddenRows.push(row);
-    }
-  }
-
-  afterHiddenRow() {
-    const table = this.hot.table; console.log(table);
-    let hiddenRows = this.hiddenRowsPlugin.hiddenRows;
-
-    if (this.settings.selectHiddenRows === true) {
-      if (hiddenRows.length > 0) {
-        arrayEach(hiddenRows, (row) => {
-          row = parseInt(row, 10);
-
-          if (hasClass(table.rows[row + 1], 'checked')) {
-            console.log('checked');
-          }
-        });
-      }
-    }
   }
 
   /**
@@ -348,10 +330,7 @@ class rowSelection extends BasePlugin {
    * @private
    */
   checkAll() {
-    const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    const arrayInputs = Array.from(inputs);
-    const tbody = this.hot.view.TBODY;
-    let selected = this.settings.selectedRows;
+    const {arrayInputs, tbody, selected} = this.buttonConstant();
     let max = typeof this.settings.multiselect === 'number' ? (this.settings.multiselect - this.completed) : arrayInputs.length;
     for (let i = 0; i < max; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
@@ -373,10 +352,7 @@ class rowSelection extends BasePlugin {
    * @private
    */
   clearAll() {
-    const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    const arrayInputs = Array.from(inputs);
-    const tbody = this.hot.view.TBODY;
-    let selected = this.settings.selectedRows;
+    const {arrayInputs, tbody, selected} = this.buttonConstant();
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
@@ -395,12 +371,9 @@ class rowSelection extends BasePlugin {
    * @private
    */
   onlySelectable() {
-    this.clearAll();
-    const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    const arrayInputs = Array.from(inputs);
-    const tbody = this.hot.view.TBODY;
-    let selected = this.settings.selectedRows;
+    const {arrayInputs, tbody, selected} = this.buttonConstant();
     let rows = this.isRowSelectable();
+    this.clearAll();
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
@@ -416,6 +389,15 @@ class rowSelection extends BasePlugin {
       }
     }
     console.log([...this.selectedData.entries()]);
+  }
+
+  buttonConstant() {
+    const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
+    return {
+      arrayInputs: Array.from(inputs),
+      tbody: this.hot.view.TBODY,
+      selected: this.settings.selectedRows
+    };
   }
 
   /**
