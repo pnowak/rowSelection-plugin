@@ -112,7 +112,7 @@ class rowSelection extends BasePlugin {
       this.eventManager = new EventManager(this);
     }
 
-    this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
+    this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows'); console.log(this.hiddenRowsPlugin);
     this.hiddencolumnsPlugin = this.hot.getPlugin('hiddenColumns');
 
     let settings = this.hot.getSettings().rowSelection;
@@ -282,6 +282,9 @@ class rowSelection extends BasePlugin {
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
         this.completed += 1;
+        if (this.completed === this.settings.multiselect) {
+          this.complet();
+        }
         addClass(table.rows[tr.rowIndex], 'checked');
         table.rows[tr.rowIndex].style.color = 'red';
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
@@ -335,6 +338,9 @@ class rowSelection extends BasePlugin {
     for (let i = 0; i < max; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
+      if (input.checked === true) {
+        console.log('continue', input); continue;
+      }
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'red';
@@ -342,6 +348,7 @@ class rowSelection extends BasePlugin {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
     }
+    this.complet();
     console.log([...this.selectedData.entries()]);
   }
 
@@ -357,6 +364,7 @@ class rowSelection extends BasePlugin {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
       input.checked = false;
+      input.disabled = false;
       removeClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'black';
     }
@@ -391,6 +399,16 @@ class rowSelection extends BasePlugin {
     console.log([...this.selectedData.entries()]);
   }
 
+  complet() {
+    const {arrayInputs} = this.buttonConstant();
+    for (let i = 0; i < arrayInputs.length; i += 1) {
+      let input = arrayInputs[i];
+      if (input.checked === false) {
+        input.disabled = true;
+      }
+    }
+  }
+
   buttonConstant() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     return {
@@ -401,7 +419,7 @@ class rowSelection extends BasePlugin {
   }
 
   /**
-   * The destroy method should de-assign all of your properties.
+   * De-assign all of your properties.
    */
   destroy() {
     this.hiddenRowsPlugin = null;
@@ -412,5 +430,5 @@ class rowSelection extends BasePlugin {
 
 export {rowSelection};
 
-// You need to register your plugin in order to use it within Handsontable.
+// Register plugin
 registerPlugin('rowSelection', rowSelection);
