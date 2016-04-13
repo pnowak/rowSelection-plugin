@@ -1,6 +1,7 @@
 import BasePlugin from './../_base';
 import {registerPlugin, getPlugin} from './../../plugins';
 import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
+import {arrayEach} from './../../helpers/array';
 import {EventManager} from './../../eventManager';
 
 /**
@@ -98,7 +99,7 @@ class rowSelection extends BasePlugin {
       this.eventManager = new EventManager(this);
     }
 
-    this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows'); console.log(this.hiddenRowsPlugin);
+    this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
     this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns'); console.log(this.hiddenColumnsPlugin);
 
     let settings = this.hot.getSettings().rowSelection;
@@ -127,13 +128,6 @@ class rowSelection extends BasePlugin {
         this.addHook('afterInit', () => this.insertRowHeaderInput());
       } else {
         this.addHook('afterInit', () => this.insertRowHeaderInput(settings.inputPosition));
-      }
-
-      if (settings.multiselect === true) {
-        let rowsCount = this.addHook('afterInit', () => this.hot.countRows());
-        settings.multiselect = rowsCount;
-      } else if (settings.multiselect === false) {
-        settings.multiselect = 1;
       }
 
       if (typeof settings.isRowSelectable === 'function') {
@@ -281,6 +275,13 @@ class rowSelection extends BasePlugin {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
     }
+    if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+      let columns = this.hiddenColumnsPlugin.hiddenColumns;
+      for (let i = 0; i < columns.length; i += 1) {
+        let values = [...this.selectedData.values()]; console.log(values, values[i]);
+        values[i].splice(columns[i], 1);
+      }
+    }
     console.log([...this.selectedData.entries()]);
   }
 
@@ -296,7 +297,6 @@ class rowSelection extends BasePlugin {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
       input.checked = false;
-      input.disabled = false;
       removeClass(tbody.rows[index], 'checked');
       tbody.rows[index].style.color = 'black';
     }
