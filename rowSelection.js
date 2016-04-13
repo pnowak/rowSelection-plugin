@@ -1,7 +1,6 @@
 import BasePlugin from './../_base';
 import {registerPlugin, getPlugin} from './../../plugins';
 import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
-import {arrayEach} from './../../helpers/array';
 import {EventManager} from './../../eventManager';
 
 /**
@@ -277,9 +276,11 @@ class rowSelection extends BasePlugin {
     }
     if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
       let columns = this.hiddenColumnsPlugin.hiddenColumns;
-      for (let i = 0; i < columns.length; i += 1) {
-        let values = [...this.selectedData.values()]; console.log(values, values[i]);
-        values[i].splice(columns[i], 1);
+      let values = [...this.selectedData.values()];
+      for (let i = 0; i < values.length; i += 1) {
+        for (let j = 0; j < columns.length; j += 1) {
+          values[i].splice(columns[j], 1); console.log(columns[j]);
+        }
       }
     }
     console.log([...this.selectedData.entries()]);
