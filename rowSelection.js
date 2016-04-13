@@ -221,6 +221,19 @@ class rowSelection extends BasePlugin {
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
           this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
         }
+        if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+          const columnsCount = this.hot.countCols();
+          const arr = [];
+          let j = 0;
+
+          while (j < columnsCount) {
+            if (!(this.hiddenColumnsPlugin.isHidden(j))) {
+              arr.push(this.hot.getDataAtCell(tr.rowIndex - 1, j));
+            }
+            j++;
+          }
+          this.selectedData.set(table.rows[tr.rowIndex], arr);
+        }
       }
       if (!src.checked) {
         removeClass(table.rows[tr.rowIndex], 'checked');
@@ -273,14 +286,18 @@ class rowSelection extends BasePlugin {
       if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
-    }
-    if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-      let columns = this.hiddenColumnsPlugin.hiddenColumns;
-      let values = [...this.selectedData.values()];
-      for (let i = 0; i < values.length; i += 1) {
-        for (let j = 0; j < columns.length; j += 1) {
-          values[i].splice(columns[j], 1); console.log(columns[j]);
+      if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+        const columnsCount = this.hot.countCols();
+        const arr = [];
+        let j = 0;
+
+        while (j < columnsCount) {
+          if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
+            arr.push(this.hot.getDataAtCell(index, j));
+          }
+          j++;
         }
+        this.selectedData.set(tbody.rows[index], arr);
       }
     }
     console.log([...this.selectedData.entries()]);
@@ -324,6 +341,19 @@ class rowSelection extends BasePlugin {
           tbody.rows[index].style.color = 'red';
           if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
             this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
+          }
+          if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+            const columnsCount = this.hot.countCols();
+            const arr = [];
+            let j = 0;
+
+            while (j < columnsCount) {
+              if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
+                arr.push(this.hot.getDataAtCell(index, j));
+              }
+              j++;
+            }
+            this.selectedData.set(tbody.rows[index], arr);
           }
         }
       }
