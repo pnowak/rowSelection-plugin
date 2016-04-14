@@ -18,7 +18,9 @@ import {EventManager} from './../../eventManager';
  * // as a object
  * rowSelection: {
  *  inputPosition: 'after',
- *  selectedRows: [2, 4, 6, 8, 10] or [[1, 5], 10]
+ *  selectedRows: [2, 4, 6, 8, 10] or [[1, 5], 10],
+ *  selectHiddenRows: true,
+ *  selectHiddenColumns: false
  * }
  *
  */
@@ -45,13 +47,22 @@ class rowSelection extends BasePlugin {
      */
     this.hiddenRowsPlugin = null;
     /**
+     * return data from hidding rows or not
+     *
+     * @type {Boolean}
+     */
+    this.selectHiddenRows = void 0;
+    /**
      * Cached reference to the HiddenColumns plugin.
      *
      * @type {Object}
      */
     this.hiddenColumnsPlugin = null;
-
-    this.selectHiddenRows = void 0;
+    /**
+     * return data from hidding columns or not
+     *
+     * @type {Boolean}
+     */
     this.selectHiddenColumns = void 0;
     /**
      * position input, 'after' 'before' or undefined (replace)
@@ -242,7 +253,7 @@ class rowSelection extends BasePlugin {
           this.selectedData.delete(table.rows[tr.rowIndex]);
         }
       }
-      console.log([...this.selectedData.entries()]);
+      console.log([...this.selectedData.values()]);
     }
   }
 
@@ -287,20 +298,10 @@ class rowSelection extends BasePlugin {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
       if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-        const columnsCount = this.hot.countCols();
-        const arr = [];
-        let j = 0;
-
-        while (j < columnsCount) {
-          if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
-            arr.push(this.hot.getDataAtCell(index, j));
-          }
-          j++;
-        }
-        this.selectedData.set(tbody.rows[index], arr);
+        this.hidden(tbody.rows, index);
       }
     }
-    console.log([...this.selectedData.entries()]);
+    console.log([...this.selectedData.values()]);
   }
 
   /**
@@ -343,24 +344,44 @@ class rowSelection extends BasePlugin {
             this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
           }
           if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-            const columnsCount = this.hot.countCols();
-            const arr = [];
-            let j = 0;
-
-            while (j < columnsCount) {
-              if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
-                arr.push(this.hot.getDataAtCell(index, j));
-              }
-              j++;
-            }
-            this.selectedData.set(tbody.rows[index], arr);
+            this.hidden(tbody.rows, index);
           }
         }
       }
     }
-    console.log([...this.selectedData.entries()]);
+    console.log([...this.selectedData.values()]);
   }
 
+  /**
+   * Check if given row AND/OR column is hidden.
+   *
+   * @private
+   * @param {Node} node row
+   * @param {Number} given row number
+   * @param {Number} special fo click input
+   * @param {Number} count all columns
+   * @param {Array} array init
+   * @param {Number} needed while comparison
+   */
+  hidden(tableRows, index, columnsCount = this.hot.countCols(), arr = [], j = 0) {
+    while (j < columnsCount) {
+      if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
+        arr.push(this.hot.getDataAtCell(index, j));
+      }
+      j++;
+    }
+    if (arr.length === 0) {
+      return;
+    }
+    this.selectedData.set(tableRows[index], arr);
+  }
+
+  /**
+   * Constant to button action
+   *
+   * @private
+   * @returns {Object}
+   */
   buttonConstant() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
     return {
@@ -388,6 +409,7 @@ class rowSelection extends BasePlugin {
    * Create button
    *
    * @private
+   * @param {String} button label
    */
   createButton(value) {
     const button = document.createElement('button');
