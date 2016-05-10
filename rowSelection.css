@@ -1,0 +1,10 @@
+/*!
+ * Handsontable RowSelection
+ */
+
+ /* table.rows[tr.rowIndex].style.color = 'red'; */
+
+.handsontable tr.checked {
+  color: #CC0000;
+}
+

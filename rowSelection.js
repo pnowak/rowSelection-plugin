@@ -4,7 +4,7 @@ import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
 import {EventManager} from './../../eventManager';
 
 /**
- * @plugin rowSelection
+ * @plugin RowSelection
  *
  * @description
  * This plugin allows injected checkbox in row header
@@ -13,18 +13,18 @@ import {EventManager} from './../../eventManager';
  * ```js
  * ...
  * // as boolean
- * rowSelection: true
+ * RowSelection: true
  * ...
  * // as a object
- * rowSelection: {
- *  inputPosition: 'after',
- *  selectedRows: [2, 4, 6, 8, 10] or [[1, 5], 10],
+ * RowSelection: {
+ *  checkboxPosition: 'after',
+ *  selectableRows: [2, 4, 6, 8, 10] or [[1, 5], 10],
  *  selectHiddenRows: true,
  *  selectHiddenColumns: false
  * }
  *
  */
-class rowSelection extends BasePlugin {
+class RowSelection extends BasePlugin {
   constructor(hotInstance) {
     super(hotInstance);
     /**
@@ -69,13 +69,13 @@ class rowSelection extends BasePlugin {
      *
      * @type {String}
      */
-    this.inputPosition = void 0;
+    this.checkboxPosition = void 0;
     /**
      * cherry-pick rows
      *
      * @type {Array}
      */
-    this.selectedRows = void 0;
+    this.selectableRows = void 0;
     /**
      * configuration function to determine which rows are selectable
      *
@@ -94,7 +94,7 @@ class rowSelection extends BasePlugin {
    * Checks if the plugin is enabled in the settings.
    */
   isEnabled() {
-    return !!this.hot.getSettings().rowSelection;
+    return !!this.hot.getSettings().RowSelection;
   }
 
   /**
@@ -112,32 +112,32 @@ class rowSelection extends BasePlugin {
     this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
     this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns'); console.log(this.hiddenColumnsPlugin);
 
-    let settings = this.hot.getSettings().rowSelection;
+    let settings = this.hot.getSettings().RowSelection;
 
     if (typeof settings === 'object') {
       this.settings = settings; console.log(settings);
 
-      if (settings.selectedRows === undefined) {
-        settings.selectedRows = this.settings.selectedRows;
-      } else if (Array.isArray([...settings.selectedRows])) {
+      if (settings.selectableRows === undefined) {
+        settings.selectableRows = this.settings.selectableRows;
+      } else if (Array.isArray([...settings.selectableRows])) {
         let rows = [];
-        for (let i = 0, len = settings.selectedRows.length; i < len; i += 1) {
-          if (Array.isArray(settings.selectedRows[i])) {
-            const [start, stop] = settings.selectedRows[i];
+        for (let i = 0, len = settings.selectableRows.length; i < len; i += 1) {
+          if (Array.isArray(settings.selectableRows[i])) {
+            const [start, stop] = settings.selectableRows[i];
             for (let j = start; j <= stop; j += 1) {
               rows.push(j);
             }
           } else {
-            rows.push(settings.selectedRows[i]);
+            rows.push(settings.selectableRows[i]);
           }
         }
-        settings.selectedRows = rows;
+        settings.selectableRows = rows;
       }
 
-      if (typeof settings.inputPosition === 'undefined') {
+      if (typeof settings.checkboxPosition === 'undefined') {
         this.addHook('afterInit', () => this.insertRowHeaderInput());
       } else {
-        this.addHook('afterInit', () => this.insertRowHeaderInput(settings.inputPosition));
+        this.addHook('afterInit', () => this.insertRowHeaderInput(settings.checkboxPosition));
       }
 
       if (typeof settings.isRowSelectable === 'function') {
@@ -171,8 +171,8 @@ class rowSelection extends BasePlugin {
    */
   disablePlugin() {
     this.settings = {};
-    this.hiddenColumnsPlugin = null;
-    this.hiddenRowsPlugin = null;
+    this.isHiddenColumnsPlugin = null;
+    this.isHiddenRowsPlugin = null;
     this.selectedData.clear();
     super.disablePlugin();
   }
@@ -192,14 +192,16 @@ class rowSelection extends BasePlugin {
    *
    * @param {String} input position, default -> replace row number
    */
-  insertRowHeaderInput(inputPosition) {
+  insertRowHeaderInput(checkboxPosition) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
-    let selected = this.settings.selectedRows;
+    let selected = this.settings.selectableRows;
     let max = selected === undefined ? arrayRows.length : selected.length;
+
     for (let i = 0; i < max; i += 1) {
       let parent = selected === undefined ? arrayRows[i].parentNode : arrayRows[selected[i] - 1].parentNode;
-      switch (inputPosition) {
+
+      switch (checkboxPosition) {
         case 'before':
           parent.insertAdjacentHTML('afterbegin', '<input class="checker" type="checkbox" autocomplete="off">');
           break;
@@ -207,7 +209,7 @@ class rowSelection extends BasePlugin {
           parent.insertAdjacentHTML('beforeend', '<input class="checker" type="checkbox" autocomplete="off">');
           break;
         default:
-          let input = this.createInput();
+          let input = this.createCheckbox();
           let child = selected === undefined ? arrayRows[i] : arrayRows[selected[i] - 1];
           parent.replaceChild(input, child);
           break;
@@ -225,10 +227,10 @@ class rowSelection extends BasePlugin {
     const src = event.target;
     const table = this.hot.table;
     let tr = src.parentNode.parentNode.parentNode;
+
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
         addClass(table.rows[tr.rowIndex], 'checked');
-        table.rows[tr.rowIndex].style.color = 'red';
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
           this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
         }
@@ -248,7 +250,6 @@ class rowSelection extends BasePlugin {
       }
       if (!src.checked) {
         removeClass(table.rows[tr.rowIndex], 'checked');
-        table.rows[tr.rowIndex].style.color = 'black';
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
           this.selectedData.delete(table.rows[tr.rowIndex]);
         }
@@ -272,10 +273,10 @@ class rowSelection extends BasePlugin {
           this.checkAll();
           break;
         case 'Clear all':
-          this.clearAll();
+          this.uncheckAll();
           break;
         default:
-          this.onlySelectable();
+          this.checkOnlySelectable();
       }
     }
   }
@@ -293,12 +294,11 @@ class rowSelection extends BasePlugin {
       let input = arrayInputs[i];
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
-      tbody.rows[index].style.color = 'red';
       if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
       if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-        this.hidden(tbody.rows, index);
+        this.checkIfHidden(tbody.rows, index);
       }
     }
     console.log([...this.selectedData.values()]);
@@ -310,7 +310,7 @@ class rowSelection extends BasePlugin {
    *
    * @private
    */
-  clearAll() {
+  uncheckAll() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
@@ -328,10 +328,10 @@ class rowSelection extends BasePlugin {
    *
    * @private
    */
-  onlySelectable() {
+  checkOnlySelectable() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
     let rows = this.isRowSelectable();
-    this.clearAll();
+    this.uncheckAll();
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
@@ -339,12 +339,11 @@ class rowSelection extends BasePlugin {
         if (index === rows[j]) {
           input.checked = true;
           addClass(tbody.rows[index], 'checked');
-          tbody.rows[index].style.color = 'red';
           if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
             this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
           }
           if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-            this.hidden(tbody.rows, index);
+            this.checkIfHidden(tbody.rows, index);
           }
         }
       }
@@ -358,12 +357,11 @@ class rowSelection extends BasePlugin {
    * @private
    * @param {Node} node row
    * @param {Number} given row number
-   * @param {Number} special fo click input
    * @param {Number} count all columns
    * @param {Array} array init
    * @param {Number} needed while comparison
    */
-  hidden(tableRows, index, columnsCount = this.hot.countCols(), arr = [], j = 0) {
+  checkIfHidden(tableRows, index, columnsCount = this.hot.countCols(), arr = [], j = 0) {
     while (j < columnsCount) {
       if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
         arr.push(this.hot.getDataAtCell(index, j));
@@ -387,7 +385,7 @@ class rowSelection extends BasePlugin {
     return {
       arrayInputs: Array.from(inputs),
       tbody: this.hot.view.TBODY,
-      selected: this.settings.selectedRows
+      selected: this.settings.selectableRows
     };
   }
 
@@ -396,7 +394,7 @@ class rowSelection extends BasePlugin {
    *
    * @private
    */
-  createInput() {
+  createCheckbox() {
     const input = document.createElement('input');
     input.className = 'checker';
     input.type = 'checkbox';
@@ -423,13 +421,13 @@ class rowSelection extends BasePlugin {
    * De-assign all of your properties.
    */
   destroy() {
-    this.hiddenRowsPlugin = null;
-    this.hiddenColumnsPlugin = null;
+    this.isHiddenRowsPlugin = null;
+    this.isHiddenColumnsPlugin = null;
     super.destroy();
   }
 }
 
-export {rowSelection};
+export {RowSelection};
 
 // Register plugin
-registerPlugin('rowSelection', rowSelection);
+registerPlugin('RowSelection', RowSelection);
