@@ -110,7 +110,7 @@ class RowSelection extends BasePlugin {
     }
 
     this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
-    this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns'); console.log(this.hiddenColumnsPlugin);
+    this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns');
 
     let settings = this.hot.getSettings().RowSelection;
 
@@ -119,11 +119,13 @@ class RowSelection extends BasePlugin {
 
       if (settings.selectableRows === undefined) {
         settings.selectableRows = this.settings.selectableRows;
+
       } else if (Array.isArray([...settings.selectableRows])) {
         let rows = [];
         for (let i = 0, len = settings.selectableRows.length; i < len; i += 1) {
           if (Array.isArray(settings.selectableRows[i])) {
             const [start, stop] = settings.selectableRows[i];
+
             for (let j = start; j <= stop; j += 1) {
               rows.push(j);
             }
@@ -150,9 +152,8 @@ class RowSelection extends BasePlugin {
     this.addHook('afterInit', () => this.createButton('Select all'));
     this.addHook('afterInit', () => this.createButton('Clear all'));
     this.addHook('afterInit', () => this.createButton('Only selectable'));
-    this.registerEvents();
 
-    // The super method assigns the this.enabled property to true, which can be later used to check if plugin is already enabled.
+    this.registerEvents();
     super.enablePlugin();
   }
 
@@ -162,8 +163,10 @@ class RowSelection extends BasePlugin {
    * @private
    */
   registerEvents() {
-    this.eventManager.addEventListener(this.hot.rootElement, 'change', (e) => this.clickInput(e));
+    this.eventManager.addEventListener(this.hot.rootElement, 'change', (e) => this.clickCheckbox(e));
+    this.eventManager.addEventListener(this.hot.rootElement, 'change', () => this.returnSelectedData());
     this.eventManager.addEventListener(this.hot.rootElement, 'click', (e) => this.clickButton(e));
+    this.eventManager.addEventListener(this.hot.rootElement, 'click', () => this.returnSelectedData());
   }
 
   /**
@@ -174,6 +177,7 @@ class RowSelection extends BasePlugin {
     this.isHiddenColumnsPlugin = null;
     this.isHiddenRowsPlugin = null;
     this.selectedData.clear();
+
     super.disablePlugin();
   }
 
@@ -218,12 +222,21 @@ class RowSelection extends BasePlugin {
   }
 
   /**
+   * Return selected data
+   *
+   */
+  returnSelectedData() {
+    console.log([...this.selectedData.values()]);
+    return [...this.selectedData.values()];
+  }
+
+  /**
    * change DOM listener.
    *
    * @private
    * @param {Event} event Click event.
    */
-  clickInput(event) {
+  clickCheckbox(event) {
     const src = event.target;
     const table = this.hot.table;
     let tr = src.parentNode.parentNode.parentNode;
@@ -231,6 +244,7 @@ class RowSelection extends BasePlugin {
     if (src.nodeName == 'INPUT' && src.className == 'checker') {
       if (src.checked) {
         addClass(table.rows[tr.rowIndex], 'checked');
+
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
           this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
         }
@@ -250,11 +264,11 @@ class RowSelection extends BasePlugin {
       }
       if (!src.checked) {
         removeClass(table.rows[tr.rowIndex], 'checked');
+
         if (this.selectedData.has(table.rows[tr.rowIndex])) {
           this.selectedData.delete(table.rows[tr.rowIndex]);
         }
       }
-      console.log([...this.selectedData.values()]);
     }
   }
 
@@ -289,11 +303,14 @@ class RowSelection extends BasePlugin {
    */
   checkAll() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
+
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
+
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
+
       if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
         this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
       }
@@ -301,7 +318,6 @@ class RowSelection extends BasePlugin {
         this.checkIfHidden(tbody.rows, index);
       }
     }
-    console.log([...this.selectedData.values()]);
   }
 
   /**
@@ -312,12 +328,13 @@ class RowSelection extends BasePlugin {
    */
   uncheckAll() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
+
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
+
       input.checked = false;
       removeClass(tbody.rows[index], 'checked');
-      tbody.rows[index].style.color = 'black';
     }
     this.selectedData.clear();
   }
@@ -331,14 +348,18 @@ class RowSelection extends BasePlugin {
   checkOnlySelectable() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
     let rows = this.isRowSelectable();
+
     this.uncheckAll();
+
     for (let i = 0; i < arrayInputs.length; i += 1) {
       let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
       let input = arrayInputs[i];
+
       for (let j = 0; j < rows.length; j += 1) {
         if (index === rows[j]) {
           input.checked = true;
           addClass(tbody.rows[index], 'checked');
+
           if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
             this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
           }
@@ -348,7 +369,6 @@ class RowSelection extends BasePlugin {
         }
       }
     }
-    console.log([...this.selectedData.values()]);
   }
 
   /**
@@ -382,6 +402,7 @@ class RowSelection extends BasePlugin {
    */
   buttonConstant() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
+
     return {
       arrayInputs: Array.from(inputs),
       tbody: this.hot.view.TBODY,
@@ -396,6 +417,7 @@ class RowSelection extends BasePlugin {
    */
   createCheckbox() {
     const input = document.createElement('input');
+
     input.className = 'checker';
     input.type = 'checkbox';
     input.setAttribute('autocomplete', 'off');
@@ -421,8 +443,8 @@ class RowSelection extends BasePlugin {
    * De-assign all of your properties.
    */
   destroy() {
-    this.isHiddenRowsPlugin = null;
-    this.isHiddenColumnsPlugin = null;
+    this.hiddenRowsPlugin = null;
+    this.hiddenColumnsPlugin = null;
     super.destroy();
   }
 }
