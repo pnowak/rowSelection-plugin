@@ -1,6 +1,7 @@
 import BasePlugin from './../_base';
 import {registerPlugin, getPlugin} from './../../plugins';
 import {addClass, hasClass, removeClass} from './../../helpers/dom/element';
+import {arrayEach, arrayFilter} from './../../helpers/array';
 import {EventManager} from './../../eventManager';
 
 /**
@@ -231,6 +232,14 @@ class RowSelection extends BasePlugin {
   }
 
   /**
+   * Add selected data
+   *
+   */
+  addSelectedData(node, index, row) {
+    this.selectedData.set(node[index], this.hot.getDataAtRow(row));
+  }
+
+  /**
    * change DOM listener.
    *
    * @private
@@ -246,7 +255,7 @@ class RowSelection extends BasePlugin {
         addClass(table.rows[tr.rowIndex], 'checked');
 
         if (!(this.selectedData.has(table.rows[tr.rowIndex]))) {
-          this.selectedData.set(table.rows[tr.rowIndex], this.hot.getDataAtRow(tr.rowIndex - 1));
+          this.addSelectedData(table.rows, tr.rowIndex, tr.rowIndex - 1);
         }
         if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
           const columnsCount = this.hot.countCols();
@@ -304,20 +313,20 @@ class RowSelection extends BasePlugin {
   checkAll() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
 
-    for (let i = 0; i < arrayInputs.length; i += 1) {
-      let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
-      let input = arrayInputs[i];
+    arrayEach(arrayInputs, (input, index) => {
+      input = arrayInputs[index];
+      index = selected === undefined ? index : parseInt(selected[index] - 1, 10);
 
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
 
       if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
-        this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
+        this.addSelectedData(tbody.rows, index, tbody.rows[index].rowIndex - 1);
       }
       if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
         this.checkIfHidden(tbody.rows, index);
       }
-    }
+    });
   }
 
   /**
@@ -329,13 +338,14 @@ class RowSelection extends BasePlugin {
   uncheckAll() {
     const {arrayInputs, tbody, selected} = this.buttonConstant();
 
-    for (let i = 0; i < arrayInputs.length; i += 1) {
-      let index = selected === undefined ? i : parseInt(selected[i] - 1, 10);
-      let input = arrayInputs[i];
+    arrayEach(arrayInputs, (input, index) => {
+      input = arrayInputs[index];
+      index = selected === undefined ? index : parseInt(selected[index] - 1, 10);
 
       input.checked = false;
       removeClass(tbody.rows[index], 'checked');
-    }
+    });
+
     this.selectedData.clear();
   }
 
@@ -361,7 +371,7 @@ class RowSelection extends BasePlugin {
           addClass(tbody.rows[index], 'checked');
 
           if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
-            this.selectedData.set(tbody.rows[index], this.hot.getDataAtRow(tbody.rows[index].rowIndex - 1));
+            this.addSelectedData(tbody.rows, index, tbody.rows[index].rowIndex - 1);
           }
           if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
             this.checkIfHidden(tbody.rows, index);
