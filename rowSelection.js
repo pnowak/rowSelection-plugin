@@ -72,11 +72,17 @@ class RowSelection extends BasePlugin {
      */
     this.checkboxPosition = void 0;
     /**
-     * cherry-pick rows
+     * define which rows is selectable
      *
      * @type {Array}
      */
     this.selectableRows = void 0;
+    /**
+     * define which rows from selectableRows is selected just after Handsontable init
+     *
+     * @type {Array}
+     */
+    this.selectedRows = void 0;
     /**
      * configuration function to determine which rows are selectable
      *
@@ -138,17 +144,21 @@ class RowSelection extends BasePlugin {
       }
 
       if (typeof settings.checkboxPosition === 'undefined') {
-        this.addHook('afterInit', () => this.insertRowHeaderInput());
+        this.addHook('afterInit', () => this.insertRowHeaderCheckbox());
       } else {
-        this.addHook('afterInit', () => this.insertRowHeaderInput(settings.checkboxPosition));
+        this.addHook('afterInit', () => this.insertRowHeaderCheckbox(settings.checkboxPosition));
       }
 
       if (typeof settings.isRowSelectable === 'function') {
         this.isRowSelectable = settings.isRowSelectable;
       }
+
+      if (typeof settings.selectedRows !== 'undefined') {
+        this.addHook('afterInit', () => this.checkSelectedRows());
+      }
     }
     if (settings === true) {
-      this.addHook('afterInit', () => this.insertRowHeaderInput());
+      this.addHook('afterInit', () => this.insertRowHeaderCheckbox());
     }
 
     this.registerEvents();
@@ -188,15 +198,15 @@ class RowSelection extends BasePlugin {
   }
 
   /**
-   * click DOM listener.
+   *
    * check all checkbox
    */
   checkAll() {
-    const {arrayInputs, tbody, selected} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.buttonConstant(); console.log(arrayInputs);
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
-      index = selected === undefined ? index : parseInt(selected[index] - 1, 10);
+      index = selectable === undefined ? index : parseInt(selectable[index] - 1, 10);
 
       input.checked = true;
       addClass(tbody.rows[index], 'checked');
@@ -211,15 +221,15 @@ class RowSelection extends BasePlugin {
   }
 
   /**
-   * click DOM listener.
+   *
    * uncheck all checkbox
    */
   uncheckAll() {
-    const {arrayInputs, tbody, selected} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.buttonConstant();
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
-      index = selected === undefined ? index : parseInt(selected[index] - 1, 10);
+      index = selectable === undefined ? index : parseInt(selectable[index] - 1, 10);
 
       input.checked = false;
       removeClass(tbody.rows[index], 'checked');
@@ -229,18 +239,18 @@ class RowSelection extends BasePlugin {
   }
 
   /**
-   * click DOM listener.
+   *
    * all selectable checkbox
    */
   checkOnlySelectable() {
-    const {arrayInputs, tbody, selected} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.buttonConstant();
     let rows = this.isRowSelectable();
 
     this.uncheckAll();
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
-      index = selected === undefined ? index : parseInt(selected[index] - 1, 10);
+      index = selectable === undefined ? index : parseInt(selectable[index] - 1, 10);
 
       for (let j = 0; j < rows.length; j += 1) {
         if (index === rows[j]) {
@@ -259,6 +269,30 @@ class RowSelection extends BasePlugin {
   }
 
   /**
+   *
+   * all selected checkbox
+   */
+  checkSelectedRows() {
+    const {arrayInputs, tbody} = this.buttonConstant();
+    const selected = this.settings.selectedRows;
+
+    arrayEach(selected, (input, index) => {
+      index = parseInt(selected[index] - 1, 10); console.log(index);
+      input = arrayInputs[index]; console.log(input);
+
+      input.checked = true;
+      addClass(tbody.rows[index], 'checked');
+
+      if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
+        this.addSelectedData(tbody.rows, index, tbody.rows[index].rowIndex - 1);
+      }
+      if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+        this.checkIfHidden(tbody.rows, index);
+      }
+    });
+  }
+
+  /**
    * Return selected data
    *
    */
@@ -271,9 +305,9 @@ class RowSelection extends BasePlugin {
    * Insert checkbox in row header
    *
    * @private
-   * @param {String} input position, default -> replace row number
+   * @param {String} checkboxPosition Checkbox position, default -> replace row number
    */
-  insertRowHeaderInput(checkboxPosition) {
+  insertRowHeaderCheckbox(checkboxPosition) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
     const arrayRows = Array.from(rowHead);
     let selected = this.settings.selectableRows;
@@ -302,6 +336,9 @@ class RowSelection extends BasePlugin {
    * Add selected data
    *
    * @private
+   * @param {Node} node Node row
+   * @param {Number} index Row index
+   * @param {Node} row Node row
    */
   addSelectedData(node, index, row) {
     this.selectedData.set(node[index], this.hot.getDataAtRow(row));
@@ -353,11 +390,11 @@ class RowSelection extends BasePlugin {
    * Check if given row AND/OR column is hidden.
    *
    * @private
-   * @param {Node} node row
-   * @param {Number} given row number
-   * @param {Number} count all columns
-   * @param {Array} array init
-   * @param {Number} needed while comparison
+   * @param {Node} tableRows Node row
+   * @param {Number} index Given row number
+   * @param {Number} columnCount Count all columns
+   * @param {Array} arr Array init
+   * @param {Number} j Needed while comparison
    */
   checkIfHidden(tableRows, index, columnsCount = this.hot.countCols(), arr = [], j = 0) {
     while (j < columnsCount) {
@@ -384,7 +421,7 @@ class RowSelection extends BasePlugin {
     return {
       arrayInputs: Array.from(inputs),
       tbody: this.hot.view.TBODY,
-      selected: this.settings.selectableRows
+      selectable: this.settings.selectableRows
     };
   }
 
