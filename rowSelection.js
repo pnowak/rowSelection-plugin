@@ -14,10 +14,10 @@ import {EventManager} from './../../eventManager';
  * ```js
  * ...
  * // as boolean
- * RowSelection: true
+ * rowSelection: true
  * ...
  * // as a object
- * RowSelection: {
+ * rowSelection: {
  *  checkboxPosition: 'after',
  *  selectableRows: [2, 4, 6, 8, 10] or [[1, 5], 10],
  *  selectHiddenRows: true,
@@ -101,7 +101,7 @@ class RowSelection extends BasePlugin {
    * Checks if the plugin is enabled in the settings.
    */
   isEnabled() {
-    return !!this.hot.getSettings().RowSelection;
+    return !!this.hot.getSettings().rowSelection;
   }
 
   /**
@@ -119,7 +119,7 @@ class RowSelection extends BasePlugin {
     this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
     this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns');
 
-    let settings = this.hot.getSettings().RowSelection;
+    let settings = this.hot.getSettings().rowSelection;
 
     if (typeof settings === 'object') {
       this.settings = settings;
@@ -172,7 +172,7 @@ class RowSelection extends BasePlugin {
    */
   registerEvents() {
     this.eventManager.addEventListener(this.hot.rootElement, 'change', (e) => this.clickCheckbox(e));
-    this.eventManager.addEventListener(this.hot.rootElement, 'change', () => this.returnSelectedData());
+    this.eventManager.addEventListener(this.hot.rootElement, 'change', () => this.getSelectedValues());
   }
 
   /**
@@ -198,11 +198,29 @@ class RowSelection extends BasePlugin {
   }
 
   /**
+   * Return selected values
+   *
+   */
+  getSelectedValues() {
+    console.log([...this.selectedData.values()]);
+    return [...this.selectedData.values()];
+  }
+
+  /**
+   * Return selected entries
+   *
+   */
+  getSelectedEntries() {
+    console.log([...this.selectedData.entries()]);
+    return [...this.selectedData.entries()];
+  }
+
+  /**
    *
    * check all checkbox
    */
   checkAll() {
-    const {arrayInputs, tbody, selectable} = this.buttonConstant(); console.log(arrayInputs);
+    const {arrayInputs, tbody, selectable} = this.buttonConstant();
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
@@ -218,6 +236,7 @@ class RowSelection extends BasePlugin {
         this.checkIfHidden(tbody.rows, index);
       }
     });
+    this.getSelectedValues();
   }
 
   /**
@@ -240,7 +259,7 @@ class RowSelection extends BasePlugin {
 
   /**
    *
-   * all selectable checkbox
+   * All selectable checkbox
    */
   checkOnlySelectable() {
     const {arrayInputs, tbody, selectable} = this.buttonConstant();
@@ -266,39 +285,37 @@ class RowSelection extends BasePlugin {
         }
       }
     });
+    this.getSelectedValues();
   }
 
   /**
+   * All selected checkbox
    *
-   * all selected checkbox
+   * @private
    */
   checkSelectedRows() {
-    const {arrayInputs, tbody} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.buttonConstant();
     const selected = this.settings.selectedRows;
 
-    arrayEach(selected, (input, index) => {
-      index = parseInt(selected[index] - 1, 10); console.log(index);
-      input = arrayInputs[index]; console.log(input);
+    arrayEach(arrayInputs, (input, index) => {
+      input = arrayInputs[index];
+      index = selectable === undefined ? index : parseInt(selectable[index] - 1, 10);
 
-      input.checked = true;
-      addClass(tbody.rows[index], 'checked');
+      for (let j = 0; j < selected.length; j += 1) {
+        if (index === selected[j]) {
+          input.checked = true;
+          addClass(tbody.rows[index], 'checked');
 
-      if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
-        this.addSelectedData(tbody.rows, index, tbody.rows[index].rowIndex - 1);
-      }
-      if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
-        this.checkIfHidden(tbody.rows, index);
+          if (!(this.selectedData.has(tbody.rows[index])) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
+            this.addSelectedData(tbody.rows, index, tbody.rows[index].rowIndex - 1);
+          }
+          if ((this.settings.selectHiddenColumns) && (this.hiddenColumnsPlugin.hiddenColumns.length)) {
+            this.checkIfHidden(tbody.rows, index);
+          }
+        }
       }
     });
-  }
-
-  /**
-   * Return selected data
-   *
-   */
-  returnSelectedData() {
-    console.log([...this.selectedData.values()]);
-    return [...this.selectedData.values()];
+    this.getSelectedValues();
   }
 
   /**
@@ -453,4 +470,4 @@ class RowSelection extends BasePlugin {
 export {RowSelection};
 
 // Register plugin
-registerPlugin('RowSelection', RowSelection);
+registerPlugin('rowSelection', RowSelection);
