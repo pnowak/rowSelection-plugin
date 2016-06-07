@@ -70,11 +70,11 @@ describe('RowSelection', function() {
     expect(Handsontable.dom.hasClass(trs[0], 'checked')).not.toBe(true);
   });
 
-  it('should return values after checked input in row header', function() {
+  it('should add values after checked input in row header', function() {
     var hot = handsontable({
       data: Handsontable.helper.createSpreadsheetData(10, 10),
       RowSelection: {
-        selectableRows: [1, 8]
+        selectableRows: [6]
       },
       rowHeaders: true,
       width: 500,
@@ -82,26 +82,9 @@ describe('RowSelection', function() {
     });
     hot.getPlugin('RowSelection').checkAll();
 
-    var map = hot.getPlugin('RowSelection').selectedData;
-
-    expect(map.size).toEqual(2);
-  });
-
-  it('should return only selectable values after call checkOnlySelectable method', function() {
-    var hot = handsontable({
-      data: Handsontable.helper.createSpreadsheetData(10, 10),
-      RowSelection: {
-          selectableRows: [6]
-      },
-      rowHeaders: true,
-      width: 500,
-      height: 300
-    });
-    hot.getPlugin('RowSelection').checkOnlySelectable();
-
     var values = hot.getPlugin('RowSelection').getSelectedValues();
 
-    expect(values).toEqual('A6 B6  C6  D6  E6  F6  G6  H6  I6  J6');
+    expect(values.join('')).toEqual('A5,B5,C5,D5,E5,F5,G5,H5,I5,J5');
   });
 
   it('should return to default state after call disablePlugin method', function() {
@@ -144,16 +127,20 @@ describe('RowSelection', function() {
   it('should update settings after call updateSettings method', function() {
     var hot = handsontable({
       data: getMultilineData(10, 10),
-      RowSelection: true,
+      RowSelection: {
+        selectableRows: [6, 9]
+      },
       rowHeaders: true,
       width: 500,
       height: 300
     });
-    hot.updateSettings({
-      RowSelection: { selectableRows: [[6, 9]]}
-    });
+    hot.updateSettings({ RowSelection: true });
 
+    hot.getPlugin('RowSelection').checkAll();
 
+    var map = hot.getPlugin('RowSelection').selectedData;
+
+    expect(map.size).toEqual(10);
   });
 
   describe('hidden rows functionality', function() {
