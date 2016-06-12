@@ -270,6 +270,7 @@ class RowSelection extends BasePlugin {
         }
       }
     });
+    this.getSelectedValues();
   }
 
   /**
@@ -306,7 +307,6 @@ class RowSelection extends BasePlugin {
    *
    */
   getSelectedValues() {
-    console.log([...this.selectedData.values()]);
     return [...this.selectedData.values()];
   }
 
@@ -315,7 +315,6 @@ class RowSelection extends BasePlugin {
    *
    */
   getSelectedEntries() {
-    console.log([...this.selectedData.entries()]);
     return [...this.selectedData.entries()];
   }
 

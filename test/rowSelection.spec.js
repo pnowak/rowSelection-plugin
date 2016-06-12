@@ -1,4 +1,4 @@
-describe('RowSelection', function() {
+describe('rowSelection', function() {
   var id = 'testContainer';
 
   function getMultilineData(rows, cols) {
@@ -26,11 +26,11 @@ describe('RowSelection', function() {
     var hot = handsontable({
       data: Handsontable.helper.createSpreadsheetData(10, 10),
       rowHeaders: true,
-      RowSelection: true,
+      rowSelection: true,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -42,12 +42,12 @@ describe('RowSelection', function() {
     var hot = handsontable({
       data: Handsontable.helper.createSpreadsheetData(10, 10),
       rowHeaders: true,
-      RowSelection: true,
+      rowSelection: true,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').checkAll();
-    hot.getPlugin('RowSelection').uncheckAll();
+    hot.getPlugin('rowSelection').checkAll();
+    hot.getPlugin('rowSelection').uncheckAll();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -58,12 +58,12 @@ describe('RowSelection', function() {
   it('should "rowHeaders" set as `true`', function() {
     var hot = handsontable({
       data: Handsontable.helper.createSpreadsheetData(10, 10),
-      RowSelection: true,
+      rowSelection: true,
       rowHeaders: false,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -73,16 +73,16 @@ describe('RowSelection', function() {
   it('should add values after checked input in row header', function() {
     var hot = handsontable({
       data: Handsontable.helper.createSpreadsheetData(10, 10),
-      RowSelection: {
+      rowSelection: {
         selectableRows: [6]
       },
       rowHeaders: true,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
-    var values = hot.getPlugin('RowSelection').getSelectedValues();
+    var values = hot.getPlugin('rowSelection').getSelectedValues();
 
     expect(values.join('')).toEqual('A6,B6,C6,D6,E6,F6,G6,H6,I6,J6');
   });
@@ -90,14 +90,14 @@ describe('RowSelection', function() {
   it('should return to default state after call disablePlugin method', function() {
     var hot = handsontable({
       data: getMultilineData(10, 10),
-      RowSelection: true,
+      rowSelection: true,
       rowHeaders: true,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
-    hot.getPlugin('RowSelection').disablePlugin();
+    hot.getPlugin('rowSelection').disablePlugin();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -108,15 +108,15 @@ describe('RowSelection', function() {
   it('should check input in row header after call enablePlugin method', function() {
     var hot = handsontable({
       data: getMultilineData(10, 10),
-      RowSelection: true,
+      rowSelection: true,
       rowHeaders: true,
       width: 500,
       height: 300
     });
-    hot.getPlugin('RowSelection').disablePlugin();
-    hot.getPlugin('RowSelection').enablePlugin();
+    hot.getPlugin('rowSelection').disablePlugin();
+    hot.getPlugin('rowSelection').enablePlugin();
 
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -127,18 +127,18 @@ describe('RowSelection', function() {
   it('should update settings after call updateSettings method', function() {
     var hot = handsontable({
       data: getMultilineData(10, 10),
-      RowSelection: {
+      rowSelection: {
         selectableRows: [6, 9]
       },
       rowHeaders: true,
       width: 500,
       height: 300
     });
-    hot.updateSettings({ RowSelection: true });
+    hot.updateSettings({ rowSelection: true });
 
-    hot.getPlugin('RowSelection').checkAll();
+    hot.getPlugin('rowSelection').checkAll();
 
-    var map = hot.getPlugin('RowSelection').selectedData;
+    var map = hot.getPlugin('rowSelection').selectedData;
 
     expect(map.size).toEqual(10);
   });
@@ -147,7 +147,7 @@ describe('RowSelection', function() {
     it('should allow hidden rows, when "selectHiddenRows" property is set to `false`', function() {
       var hot = handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 10),
-        RowSelection: {
+        rowSelection: {
           checkboxPosition: 'after',
           selectHiddenRows: false
         },
@@ -158,9 +158,9 @@ describe('RowSelection', function() {
         width: 500,
         height: 300
       });
-      hot.getPlugin('RowSelection').checkAll();
+      hot.getPlugin('rowSelection').checkAll();
 
-      var map = hot.getPlugin('RowSelection').selectedData;
+      var map = hot.getPlugin('rowSelection').selectedData;
 
       expect(map.size).toEqual(10);
     });
@@ -168,7 +168,7 @@ describe('RowSelection', function() {
     it('should skip hidden rows, when "selectHiddenRows" property is set to `true`', function() {
       var hot = handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 10),
-        RowSelection: {
+        rowSelection: {
           checkboxPosition: 'after',
           selectHiddenRows: true
         },
@@ -179,9 +179,9 @@ describe('RowSelection', function() {
         width: 500,
         height: 300
       });
-      hot.getPlugin('RowSelection').checkAll();
+      hot.getPlugin('rowSelection').checkAll();
 
-      var map = hot.getPlugin('RowSelection').selectedData;
+      var map = hot.getPlugin('rowSelection').selectedData;
 
       expect(map.size).toEqual(8);
     });
@@ -191,7 +191,7 @@ describe('RowSelection', function() {
     it('should allow to copy hidden columns, when "selectHiddenColumns" property is set to `false`', function() {
       var hot = handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 10),
-        RowSelection: {
+        rowSelection: {
           selectableRows: [1],
           selectHiddenColumns: false
         },
@@ -202,9 +202,9 @@ describe('RowSelection', function() {
         width: 500,
         height: 300
       });
-      hot.getPlugin('RowSelection').checkAll();
+      hot.getPlugin('rowSelection').checkAll();
 
-      var val = hot.getPlugin('RowSelection').getSelectedValues();
+      var val = hot.getPlugin('rowSelection').getSelectedValues();
 
       expect(val[0].length).toEqual(10);
     });
@@ -212,7 +212,7 @@ describe('RowSelection', function() {
     it('should skip hidden columns, when "selectHiddenColumns" property is set to `true`', function() {
       var hot = handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 10),
-        RowSelection: {
+        rowSelection: {
           selectableRows: [1],
           selectHiddenColumns: true
         },
@@ -223,9 +223,9 @@ describe('RowSelection', function() {
         width: 500,
         height: 300
       });
-      hot.getPlugin('RowSelection').checkAll();
+      hot.getPlugin('rowSelection').checkAll();
 
-      var val = hot.getPlugin('RowSelection').getSelectedValues();
+      var val = hot.getPlugin('rowSelection').getSelectedValues();
 
       expect(val[0].length).toEqual(8);
     });
