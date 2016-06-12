@@ -20,6 +20,7 @@ import {EventManager} from './../../eventManager';
  * rowSelection: {
  *  checkboxPosition: 'after', // default null
  *  selectableRows: [2, 4, 6, 8, 10] or [[1, 5], 10], // default undefined
+ *  selectedRows: [2, 10] // default undefined
  *  selectHiddenRows: true, // default false
  *  selectHiddenColumns: false // default false
  * }
@@ -101,7 +102,7 @@ class RowSelection extends BasePlugin {
    * Checks if the plugin is enabled in the settings.
    */
   isEnabled() {
-    return !!this.hot.getSettings().RowSelection;
+    return !!this.hot.getSettings().rowSelection;
   }
 
   /**
@@ -119,7 +120,11 @@ class RowSelection extends BasePlugin {
     this.hiddenRowsPlugin = this.hot.getPlugin('hiddenRows');
     this.hiddenColumnsPlugin = this.hot.getPlugin('hiddenColumns');
 
-    let settings = this.hot.getSettings().RowSelection;
+    let settings = this.hot.getSettings().rowSelection;
+
+    if (settings === true) {
+      this.addHook('afterInit', () => this.insertRowHeaderCheckbox());
+    }
 
     if (typeof settings === 'object') {
       this.settings = settings;
@@ -157,9 +162,6 @@ class RowSelection extends BasePlugin {
         this.addHook('afterInit', () => this.checkSelectedRows());
       }
     }
-    if (settings === true) {
-      this.addHook('afterInit', () => this.insertRowHeaderCheckbox());
-    }
 
     this.registerEvents();
     super.enablePlugin();
@@ -194,8 +196,6 @@ class RowSelection extends BasePlugin {
     this.hiddenRowsPlugin = null;
     this.hiddenColumnsPlugin = null;
 
-    this.clearCheckbox();
-
     super.disablePlugin();
   }
 
@@ -204,7 +204,7 @@ class RowSelection extends BasePlugin {
    * check all checkbox
    */
   checkAll() {
-    const {arrayInputs, tbody, selectable} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.checkedConstant();
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
@@ -229,7 +229,7 @@ class RowSelection extends BasePlugin {
    * uncheck all checkbox
    */
   uncheckAll() {
-    const {arrayInputs, tbody, selectable} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.checkedConstant();
 
     arrayEach(arrayInputs, (input, index) => {
       input = arrayInputs[index];
@@ -247,7 +247,7 @@ class RowSelection extends BasePlugin {
    * all selectable checkbox
    */
   checkOnlySelectable() {
-    const {arrayInputs, tbody, selectable} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.checkedConstant();
     let rows = this.isRowSelectable();
 
     this.uncheckAll();
@@ -277,7 +277,7 @@ class RowSelection extends BasePlugin {
    * all selected checkbox
    */
   checkSelectedRows() {
-    const {arrayInputs, tbody, selectable} = this.buttonConstant();
+    const {arrayInputs, tbody, selectable} = this.checkedConstant();
     const selected = this.settings.selectedRows;
 
     arrayEach(arrayInputs, (input, index) => {
@@ -323,7 +323,7 @@ class RowSelection extends BasePlugin {
    * Insert checkbox in row header
    *
    * @private
-   * @param {String} checkboxPosition Checkbox position, default -> replace row number
+   * @param {String} checkboxPosition Checkbox position, default -> null (replace row number)
    */
   insertRowHeaderCheckbox(checkboxPosition) {
     const rowHead = this.hot.rootElement.children[2].querySelectorAll('span.rowHeader');
@@ -348,43 +348,6 @@ class RowSelection extends BasePlugin {
           break;
       }
     }
-  }
-
-  /**
-   * Remove checkbox from row header
-   *
-   * @private
-   */
-  clearCheckbox() {
-    if (!this.hot.view) {
-      return;
-    }
-
-    let checkbox = this.hot.rootElement.children[2].querySelectorAll('input.checker');
-    let arrayCheckbox = Array.from(checkbox);
-
-    let removeCheckbox = function(checkbox) {
-      if (checkbox) {
-        checkbox.parentNode.removeChild(checkbox);
-      }
-    };
-
-    arrayEach(arrayCheckbox, (input, index) => {
-      input = arrayCheckbox[index];
-      removeCheckbox(input);
-    });
-  }
-
-  /**
-   * Add selected data
-   *
-   * @private
-   * @param {Node} node Node row
-   * @param {Number} index Row index
-   * @param {Node} row Node row
-   */
-  addSelectedData(node, index, row) {
-    this.selectedData.set(node[index], this.hot.getDataAtRow(row));
   }
 
   /**
@@ -430,6 +393,18 @@ class RowSelection extends BasePlugin {
   }
 
   /**
+   * Add selected data
+   *
+   * @private
+   * @param {Node} node Node row
+   * @param {Number} index Row index
+   * @param {Node} row Node row
+   */
+  addSelectedData(node, index, row) {
+    this.selectedData.set(node[index], this.hot.getDataAtRow(row));
+  }
+
+  /**
    * Check if given row AND/OR column is hidden.
    *
    * @private
@@ -441,7 +416,7 @@ class RowSelection extends BasePlugin {
    */
   checkIfHidden(tableRows, index, columnsCount = this.hot.countCols(), arr = [], j = 0) {
     while (j < columnsCount) {
-      if (!(this.hiddenColumnsPlugin.isHidden(j)) && !(this.hiddenRowsPlugin.isHidden(index))) {
+      if (!(this.hiddenColumnsPlugin.isHidden(j)) && !((this.settings.selectHiddenRows) && (this.hiddenRowsPlugin.isHidden(index)))) {
         arr.push(this.hot.getDataAtCell(index, j));
       }
       j++;
@@ -453,12 +428,12 @@ class RowSelection extends BasePlugin {
   }
 
   /**
-   * Constant to button action
+   * Constant to checked action
    *
    * @private
    * @returns {Object}
    */
-  buttonConstant() {
+  checkedConstant() {
     const inputs = this.hot.rootElement.children[2].querySelectorAll('input.checker');
 
     return {
@@ -494,4 +469,4 @@ class RowSelection extends BasePlugin {
 export {RowSelection};
 
 // Register plugin
-registerPlugin('RowSelection', RowSelection);
+registerPlugin('rowSelection', RowSelection);

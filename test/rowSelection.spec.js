@@ -84,7 +84,7 @@ describe('RowSelection', function() {
 
     var values = hot.getPlugin('RowSelection').getSelectedValues();
 
-    expect(values.join('')).toEqual('A5,B5,C5,D5,E5,F5,G5,H5,I5,J5');
+    expect(values.join('')).toEqual('A6,B6,C6,D6,E6,F6,G6,H6,I6,J6');
   });
 
   it('should return to default state after call disablePlugin method', function() {
@@ -97,7 +97,7 @@ describe('RowSelection', function() {
     });
     hot.getPlugin('RowSelection').checkAll();
 
-    hot.getPlugin('rowSelection').disablePlugin();
+    hot.getPlugin('RowSelection').disablePlugin();
 
     var trs = hot.view.wt.wtTable.TBODY.childNodes;
 
@@ -113,8 +113,8 @@ describe('RowSelection', function() {
       width: 500,
       height: 300
     });
-    hot.getPlugin('rowSelection').disablePlugin();
-    hot.getPlugin('rowSelection').enablePlugin();
+    hot.getPlugin('RowSelection').disablePlugin();
+    hot.getPlugin('RowSelection').enablePlugin();
 
     hot.getPlugin('RowSelection').checkAll();
 
