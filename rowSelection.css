@@ -2,7 +2,7 @@
  * Handsontable RowSelection
  */
 
-.handsontable tr.checked {
+.handsontable tr.ht_checkedRow {
   color: #de4e0f;
 }
 
